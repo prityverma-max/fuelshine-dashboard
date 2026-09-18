@@ -336,62 +336,67 @@ td.num, th.num{text-align:right; font-variant-numeric:tabular-nums;}
 .rank{display:inline-flex; align-items:center; justify-content:center; width:21px; height:21px;
   border-radius:6px; background:var(--navy); color:#fff; font-weight:700; font-size:var(--fs-2xs);}
 
-/* ---------------- inline status controls ---------------- */
-.statuscell{min-width:170px; white-space:normal; vertical-align:top;}
-.statussel{
-  width:100%; padding:6px 8px; border:1px solid var(--border-2); border-radius:7px;
-  background:var(--bg); color:var(--ink); font-family:var(--display);
-  font-size:var(--fs-xs); font-weight:700; cursor:pointer;
+/* ---------------- inline status controls ----------------
+   Rendered as a status chip, not a bare form control: coloured dot,
+   tinted pill, the select itself made invisible so the chip reads as a
+   badge while staying a real <select> for keyboard and screen readers. */
+.statuscell{min-width:176px; white-space:normal; vertical-align:top;}
+
+.statuschip{
+  display:inline-flex; align-items:center; gap:7px; position:relative;
+  padding:5px 9px 5px 10px; border-radius:100px; cursor:pointer;
+  border:1px solid var(--border-2); background:var(--surface);
+  transition:border-color .12s, background .12s;
 }
-.statussel:focus{outline:none; border-color:var(--green-mid); box-shadow:0 0 0 3px var(--green-wash);}
-.statussel.ok{border-color:var(--green-edge); color:var(--ok); background:var(--green-wash);}
-.statussel.watch{border-color:#EDD9AE; color:var(--watch); background:var(--watch-wash);}
-.statussel.risk{border-color:#EFC9C1; color:var(--risk); background:var(--risk-wash);}
+.statuschip:hover{border-color:var(--muted-2);}
+.statuschip:focus-within{border-color:var(--green-mid); box-shadow:0 0 0 3px var(--green-wash);}
+.statuschip .sdot{width:7px; height:7px; border-radius:50%; background:var(--muted-2); flex:none;}
+.statuschip::after{
+  content:''; width:0; height:0; flex:none; margin-left:1px;
+  border-left:3.5px solid transparent; border-right:3.5px solid transparent;
+  border-top:4px solid var(--muted-2);
+}
+.statuschip .statussel{
+  appearance:none; -webkit-appearance:none; border:none; background:transparent;
+  font-family:var(--display); font-size:var(--fs-2xs); font-weight:700;
+  color:inherit; cursor:pointer; padding:0 2px 0 0; outline:none; width:auto;
+}
+.statuschip.ok{background:var(--green-wash); border-color:var(--green-edge); color:var(--ok);}
+.statuschip.ok .sdot{background:var(--ok);}
+.statuschip.ok::after{border-top-color:var(--ok);}
+.statuschip.watch{background:var(--watch-wash); border-color:#EDD9AE; color:var(--watch);}
+.statuschip.watch .sdot{background:var(--watch);}
+.statuschip.watch::after{border-top-color:var(--watch);}
+.statuschip.risk{background:var(--risk-wash); border-color:#EFC9C1; color:var(--risk);}
+.statuschip.risk .sdot{background:var(--risk);}
+.statuschip.risk::after{border-top-color:var(--risk);}
+
+/* The note stays quiet until you interact with it, so a table of 34 rows
+   does not read as 34 empty input boxes. */
 .statusnote{
-  width:100%; margin-top:5px; padding:5px 8px; border:1px solid var(--border-2);
-  border-radius:7px; background:var(--bg); color:var(--ink); font-family:var(--sans); font-size:var(--fs-2xs);
+  display:block; width:100%; margin-top:6px; padding:4px 7px;
+  border:1px solid transparent; border-radius:6px; background:transparent;
+  color:var(--muted); font-family:var(--sans); font-size:var(--fs-2xs);
+  transition:border-color .12s, background .12s;
 }
-.statusnote:focus{outline:none; border-color:var(--green-mid); box-shadow:0 0 0 3px var(--green-wash);}
-.statusmeta{font-size:var(--fs-3xs); color:var(--muted-2); margin-top:4px;}
+.statusnote::placeholder{color:var(--muted-2); opacity:.75;}
+.statusnote:hover{border-color:var(--border-2); background:var(--bg);}
+.statusnote:focus{outline:none; border-color:var(--green-mid);
+  background:var(--bg); color:var(--ink); box-shadow:0 0 0 3px var(--green-wash);}
+.statusmeta{font-size:var(--fs-3xs); color:var(--muted-2); margin-top:5px;}
 .flash{display:block; font-size:var(--fs-3xs); color:var(--ok); font-weight:700;
   height:12px; opacity:0; transition:opacity .2s;}
 .flash.show{opacity:1;}
 .flash.err{color:var(--risk);}
 
-/* ---------------- lens / rules / team ---------------- */
-.lens-grid{display:grid; grid-template-columns:repeat(3,1fr); gap:16px;}
-@media (max-width:880px){.lens-grid{grid-template-columns:1fr;}}
-.lens-grid .card h3{color:var(--navy); font-size:var(--fs-md); text-transform:none; letter-spacing:0;}
-
-.rules-grid{display:grid; grid-template-columns:1fr 1fr; gap:10px;}
-@media (max-width:760px){.rules-grid{grid-template-columns:1fr;}}
-.rule{display:flex; gap:10px; background:var(--card); border:1px solid var(--border);
-  border-radius:10px; padding:12px 14px; font-size:var(--fs-xs);}
-.rule:hover{border-color:var(--green-edge); background:var(--surface);}
-.rule .ico{color:var(--green); font-weight:800; flex-shrink:0;}
-
-.team-grid{display:grid; grid-template-columns:repeat(3,1fr); gap:12px;}
-@media (max-width:880px){.team-grid{grid-template-columns:1fr 1fr;}}
-@media (max-width:560px){.team-grid{grid-template-columns:1fr;}}
-.person{display:flex; gap:11px; background:var(--card); border:1px solid var(--border);
-  border-radius:10px; padding:13px;}
-.avatar{width:32px; height:32px; border-radius:9px; background:var(--green-wash);
-  color:var(--green-deep); display:flex; align-items:center; justify-content:center;
-  font-family:var(--display); font-weight:800; font-size:var(--fs-xs); flex-shrink:0;}
-.person .name{font-family:var(--display); font-weight:700; font-size:var(--fs-sm);}
-.person .role{color:var(--muted); font-size:var(--fs-2xs); margin-top:2px;}
-.person .gap{color:var(--risk); font-size:var(--fs-2xs); margin-top:5px;}
-
-.gaplist{display:grid; grid-template-columns:1fr 1fr; gap:9px; margin-top:12px;}
-@media (max-width:760px){.gaplist{grid-template-columns:1fr;}}
-.gapitem{font-size:var(--fs-xs); background:var(--surface); border-radius:9px;
-  padding:9px 11px; border:1px solid var(--border); color:var(--muted);}
-.gapitem b{font-family:var(--display); display:block; font-size:var(--fs-xs);
-  margin-bottom:2px; color:var(--ink);}
-
 /* ---------------- change history ---------------- */
 .histbar{display:flex; justify-content:space-between; align-items:flex-end;
-  gap:12px; flex-wrap:wrap; margin-bottom:14px;}
+  gap:14px; flex-wrap:wrap; margin-bottom:14px;}
+.histfilters{display:flex; gap:10px; flex-wrap:wrap; align-items:flex-end;}
+.histactions{display:flex; gap:8px; align-items:center; flex-wrap:wrap;}
+.histcount{font-size:var(--fs-2xs); color:var(--muted-2); margin-right:4px;
+  font-variant-numeric:tabular-nums;}
+.customrange{min-width:142px;}
 .histlist{display:flex; flex-direction:column; gap:10px;}
 .hist{background:var(--card); border:1px solid var(--border); border-radius:11px;
   padding:14px 16px; box-shadow:var(--shadow-sm); position:relative; overflow:hidden;}

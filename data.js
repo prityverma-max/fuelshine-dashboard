@@ -222,40 +222,63 @@ export const TEXT_FIELDS = new Set(FIELD_DEFS.filter(f => f[2]==='text' || f[2]=
    and its change history survive any reordering or rewording of the table
    text in this file. NEVER renumber an existing key — add new ones.
 
-   Each status set: [value, label, pill class]. The pill class drives colour:
+   Each status set: [value, label, pill class]. The pill class drives color:
    ok = green, watch = amber, risk = red, '' = neutral grey.
    ------------------------------------------------------------------ */
 
+/* Status vocabularies.
+
+   Standard US SaaS operating language — the words a Salesforce pipeline, a
+   growth team's channel review, and a US legal-ops tracker actually use, in
+   Title Case as status chips conventionally are. An American investor or
+   partner reading an exported log should recognize every term without a
+   glossary.
+
+   Wording stays neutral: a partner who says no is "Passed" — the standard
+   US business term — never anything that reads as a judgement on them.
+
+   The stored value ids are deliberately unchanged from the previous
+   version, so relabeling does not orphan anything already saved.
+
+   [value, label, pill class]. Class drives color:
+   ok = green, watch = amber, risk = red, '' = neutral gray. */
+
 export const STATUS_SETS = {
+  /* IP & legal — US legal-ops workflow. "Registered" is the correct term
+     for a granted trademark or copyright registration. */
   ip: [
-    ['not-started','Not started',''],
-    ['scoping','Scoping',  'watch'],
-    ['in-progress','In progress','watch'],
-    ['filed','Filed',      'ok'],
-    ['done','Done',        'ok'],
-    ['dropped','Dropped',  'risk']
+    ['not-started','Not Started',   ''],
+    ['counsel','Under Review',      'watch'],
+    ['in-progress','In Progress',   'watch'],
+    ['filed','Filed',               'watch'],
+    ['registered','Registered',     'ok'],
+    ['no-action','Closed',          '']
   ],
+  /* Associations & events — partnership BD pipeline. "Passed" is the
+     standard US term for a mutual no, and carries no blame. */
   assoc: [
-    ['not-contacted','Not contacted',''],
-    ['contacted','Contacted',       'watch'],
-    ['in-convo','In conversation',  'watch'],
-    ['booked','Booked / confirmed', 'ok'],
-    ['declined','Declined',         'risk'],
-    ['passed','Passed on it',       'risk']
+    ['not-started','Not Started',   ''],
+    ['outreach','Outreach Sent',    'watch'],
+    ['in-discussion','Engaged',     'watch'],
+    ['confirmed','Committed',       'ok'],
+    ['not-proceeding','Passed',     'risk'],
+    ['deferred','On Hold',          '']
   ],
+  /* Channels — growth-team lifecycle for an acquisition channel. */
   channel: [
-    ['not-started','Not started',''],
-    ['testing','Testing',   'watch'],
-    ['active','Active',     'ok'],
-    ['paused','Paused',     'watch'],
-    ['cut','Cut',           'risk']
+    ['not-started','Not Started',   ''],
+    ['piloting','Testing',          'watch'],
+    ['active','Scaling',            'ok'],
+    ['on-hold','Paused',            'watch'],
+    ['discontinued','Discontinued', 'risk']
   ],
+  /* Verticals — standard CRM pipeline stages. */
   vertical: [
-    ['not-started','Not started',''],
-    ['prospecting','Prospecting',  'watch'],
-    ['live-deals','Live deals',    'watch'],
-    ['won','Won — paying',         'ok'],
-    ['paused','Paused',            'risk']
+    ['not-started','Not Started',      ''],
+    ['prospecting','Prospecting',      'watch'],
+    ['in-pipeline','Active Pipeline',  'watch'],
+    ['closed-won','Closed Won',        'ok'],
+    ['on-hold','On Hold',              '']
   ]
 };
 

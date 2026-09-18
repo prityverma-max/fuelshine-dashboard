@@ -284,15 +284,39 @@
       <div><h2>Change history</h2><p>Every weekly save and every status change — who, when, and exactly which fields moved. Nothing here is ever overwritten; restoring writes a new entry rather than erasing one.</p></div>
     </div>
     <div class="histbar">
-      <div class="field" style="min-width:210px;">
-        <label for="histFilter">Show</label>
-        <select id="histFilter"></select>
+      <div class="histfilters">
+        <div class="field" style="min-width:170px;">
+          <label for="histPeriod">Period</label>
+          <select id="histPeriod">
+            <option value="all">All time</option>
+            <option value="week">This week</option>
+            <option value="month">This month</option>
+            <option value="quarter">This quarter</option>
+            <option value="year">This year</option>
+            <option value="custom">Custom range…</option>
+          </select>
+        </div>
+        <div class="field customrange" id="customRange" hidden>
+          <label for="histFrom">From</label>
+          <input type="date" id="histFrom">
+        </div>
+        <div class="field customrange" id="customRangeTo" hidden>
+          <label for="histTo">To</label>
+          <input type="date" id="histTo">
+        </div>
+        <div class="field" style="min-width:190px;">
+          <label for="histFilter">Type</label>
+          <select id="histFilter"></select>
+        </div>
       </div>
-      <div style="display:flex; gap:8px;">
+      <div class="histactions">
+        <span class="histcount" id="histCount"></span>
         <button class="btn ghost" id="exportBtn">Export JSON</button>
-        <button class="btn ghost" id="refreshBtn">Refresh</button>
+        <button class="btn ghost" id="archiveBtn">Archive older…</button>
+        <button class="btn ghost" id="viewArchiveBtn">View archive</button>
       </div>
     </div>
+    <div id="archiveNotice"></div>
     <div class="histlist" id="histList"></div>
   </section>
 

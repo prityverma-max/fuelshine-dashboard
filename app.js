@@ -106,7 +106,10 @@ function renderStaticShell(){
     '<option value="scope:tracker">Status changes only</option>' +
     WEEKS.map(w=>`<option value="week:${w.n}">Week ${w.n} only</option>`).join('');
 
-  const savedEditor = localStorage.getItem('fuelshine.editor') || EDITORS[0];
+  /* A browser may remember a name that has since been removed from EDITORS.
+     Fall back rather than leaving the dropdown showing nothing. */
+  const remembered = localStorage.getItem('fuelshine.editor');
+  const savedEditor = EDITORS.includes(remembered) ? remembered : EDITORS[0];
   document.getElementById('editorSelect').innerHTML =
     EDITORS.map(e=>`<option value="${esc(e)}" ${e===savedEditor?'selected':''}>${esc(e)}</option>`).join('');
 
@@ -123,21 +126,35 @@ function plainText(html){
   return (d.textContent || '').replace(/\s+/g,' ').trim();
 }
 
-/** The <td> holding a status dropdown + short note for one tracked row. */
+/** Shortens a label on a word boundary — a mid-word cut ("…are signe")
+    looks like a bug in an exported log. */
+function trim(text, max){
+  const t = plainText(text);
+  if (t.length <= max) return t;
+  const cut = t.slice(0, max);
+  const space = cut.lastIndexOf(' ');
+  return (space > max * 0.6 ? cut.slice(0, space) : cut).replace(/[\s,;:—-]+$/,'') + '…';
+}
+
+/** The <td> holding a status control + note for one tracked row. */
 function statusCell(group, key, itemLabel, trackers){
   const setName = TRACKER_GROUPS[group].set;
   const cur = trackers[key] || { status:'', note:'' };
+  const value = cur.status || STATUS_SETS[setName][0][0];
   const opts = STATUS_SETS[setName].map(([v,l]) =>
-    `<option value="${v}" ${v===cur.status?'selected':''}>${l}</option>`).join('');
-  const who = cur.updatedBy
-    ? `<div class="statusmeta">${esc(cur.updatedBy)} &middot; ${new Date(cur.updatedAt).toLocaleDateString('en-US',{month:'short',day:'numeric'})}</div>`
+    `<option value="${v}" ${v===value?'selected':''}>${l}</option>`).join('');
+  const meta = cur.updatedBy
+    ? `<div class="statusmeta">${esc(cur.updatedBy)} · ${new Date(cur.updatedAt).toLocaleDateString('en-US',{month:'short',day:'numeric'})}</div>`
     : '';
   return `<td class="statuscell">
-    <select class="statussel ${statusClass(setName, cur.status)}"
-            data-key="${esc(key)}" data-group="${group}" data-label="${esc(itemLabel)}">${opts}</select>
-    <input class="statusnote" type="text" placeholder="note…" value="${esc(cur.note||'')}"
-           data-key="${esc(key)}" data-group="${group}" data-label="${esc(itemLabel)}">
-    ${who}
+    <span class="statuschip ${statusClass(setName, value)}">
+      <span class="sdot"></span>
+      <select class="statussel" aria-label="Status"
+              data-key="${esc(key)}" data-group="${group}" data-label="${esc(itemLabel)}">${opts}</select>
+    </span>
+    <input class="statusnote" type="text" placeholder="Add a note" value="${esc(cur.note||'')}"
+           aria-label="Note" data-key="${esc(key)}" data-group="${group}" data-label="${esc(itemLabel)}">
+    ${meta}
     <span class="flash" data-flash="${esc(key)}"></span>
   </td>`;
 }
@@ -147,7 +164,7 @@ function renderTrackedTables(trackers){
     const key = 'chan:' + (i+1);
     return `<tr><td><span class="rank">${i+1}</span></td>
       <td style="white-space:normal; min-width:240px;">${c[0]}</td>
-      ${statusCell('chan', key, 'Channel — ' + plainText(c[0]).slice(0,60), trackers)}
+      ${statusCell('chan', key, 'Channel — ' + trim(c[0], 52), trackers)}
       <td>${c[1]}</td><td>${c[2]}</td>
       <td style="white-space:normal; min-width:240px;">${c[3]}</td></tr>`;
   }).join('');
@@ -183,7 +200,7 @@ function renderTrackedTables(trackers){
     const key = 'ip:' + r[0];
     return `<tr><td><span class="rank">${r[0]}</span></td>
       <td style="white-space:normal; min-width:210px;">${r[1]}</td>
-      ${statusCell('ip', key, 'IP — ' + plainText(r[1]).slice(0,60), trackers)}
+      ${statusCell('ip', key, 'IP — ' + trim(r[1], 52), trackers)}
       <td><span class="pill ${r[2]}"><span class="dot"></span>${r[3]}</span></td>
       <td>${r[4]}</td><td>${r[5]}</td>
       <td style="white-space:normal; min-width:240px;">${r[6]}</td></tr>`;
@@ -613,24 +630,63 @@ let currentBaseline = null;
 let currentWeekShown = 1;
 
 /** Reads the current value of the histFilter dropdown into a Store filter. */
-function currentHistFilter(){
-  const v = document.getElementById('histFilter').value;
-  if (!v) return undefined;
-  if (v === 'scope:week')    return { scope:'week' };
-  if (v === 'scope:tracker') return { scope:'tracker' };
-  if (v.startsWith('week:')) return { scope:'week', refKey: v.slice(5) };
-  return undefined;
+/** Start of the calendar period containing `now`. */
+function periodStart(period, now){
+  const d = new Date(now);
+  d.setHours(0,0,0,0);
+  if (period === 'week'){
+    // Monday-based, matching the sprint's own Monday cadence.
+    const dow = (d.getDay() + 6) % 7;
+    d.setDate(d.getDate() - dow);
+  } else if (period === 'month'){
+    d.setDate(1);
+  } else if (period === 'quarter'){
+    d.setMonth(Math.floor(d.getMonth()/3)*3, 1);
+  } else if (period === 'year'){
+    d.setMonth(0, 1);
+  } else {
+    return null;
+  }
+  return d;
 }
 
+/** Builds the Store filter from the three history controls. */
+function currentHistFilter(){
+  const f = {};
+  const type = document.getElementById('histFilter').value;
+  if (type === 'scope:week')    f.scope = 'week';
+  if (type === 'scope:tracker') f.scope = 'tracker';
+  if (type.startsWith('week:')){ f.scope = 'week'; f.refKey = type.slice(5); }
+
+  const period = document.getElementById('histPeriod').value;
+  if (period === 'custom'){
+    const from = document.getElementById('histFrom').value;
+    const to   = document.getElementById('histTo').value;
+    if (from) f.from = new Date(from + 'T00:00:00').toISOString();
+    if (to)   f.to   = new Date(to   + 'T23:59:59').toISOString();
+  } else if (period !== 'all'){
+    const start = periodStart(period, new Date());
+    if (start) f.from = start.toISOString();
+  }
+
+  if (viewingArchive) f.archived = true;
+  return Object.keys(f).length ? f : (viewingArchive ? { archived:true } : undefined);
+}
+
+let viewingArchive = false;
+/* Set during init. Every path that changes history goes through this so the
+   entry counters and archive banner stay in sync with the list. */
+let historyReloader = null;
+
 async function refreshEverything(){
-  const [weeks, trackers, history] = await Promise.all([
+  const [weeks, trackers] = await Promise.all([
     Store.loadWeeks(),
-    Store.loadTrackers(),
-    Store.loadHistory(currentHistFilter())
+    Store.loadTrackers()
   ]);
   renderAll(weeks);
   renderTrackedTables(trackers);
-  renderHistory(history);
+  if (historyReloader) await historyReloader();
+  else renderHistory(await Store.loadHistory(currentHistFilter()));
 }
 
 async function loadWeekIntoForm(n){
@@ -723,11 +779,12 @@ async function init(){
     document.getElementById('tab-'+t).addEventListener('click', ()=> showTab(t));
   });
 
-  histFilter.addEventListener('change', async ()=>{
+  histFilter.addEventListener('change', ()=>{
     saveUIState({ filter: histFilter.value });
-    renderHistory(await Store.loadHistory(currentHistFilter()));
+    reloadHistory();
   });
-  document.getElementById('refreshBtn').addEventListener('click', async ()=>{
+  const refreshBtn = document.getElementById('refreshBtn');
+  if (refreshBtn) refreshBtn.addEventListener('click', async ()=>{
     await refreshEverything();
     toast('Refreshed', 'Pulled the latest saved data.');
   });
@@ -746,12 +803,13 @@ async function init(){
       const { changes } = await Store.saveTracker(
         key, label, { status: sel.value, note: noteEl.value.trim() }, editorSel.value
       );
-      sel.className = 'statussel ' + statusClass(TRACKER_GROUPS[group].set, sel.value);
+      const chip = row.querySelector('.statuschip');
+      if (chip) chip.className = 'statuschip ' + statusClass(TRACKER_GROUPS[group].set, sel.value);
       if (changes.length){
         flash.textContent = 'saved';
         flash.className = 'flash show';
         setTimeout(()=>{ flash.className = 'flash'; }, 1600);
-        renderHistory(await Store.loadHistory(currentHistFilter()));
+        await reloadHistory();
       }
     }catch(e){
       flash.textContent = 'save failed';
@@ -774,6 +832,113 @@ async function init(){
   });
 
   noteInput.addEventListener('input', ()=> saveUIState({ note: noteInput.value }));
+
+  /* ---- history period + archive controls ---- */
+  const histPeriod = document.getElementById('histPeriod');
+  const histFrom = document.getElementById('histFrom');
+  const histTo = document.getElementById('histTo');
+
+  function syncCustomRange(){
+    const custom = histPeriod.value === 'custom';
+    document.getElementById('customRange').hidden = !custom;
+    document.getElementById('customRangeTo').hidden = !custom;
+  }
+
+  async function reloadHistory(){
+    renderHistory(await Store.loadHistory(currentHistFilter()));
+    const counts = await Store.historyCounts();
+    document.getElementById('histCount').textContent =
+      viewingArchive
+        ? counts.archived + ' archived'
+        : counts.live + ' entr' + (counts.live===1?'y':'ies') +
+          (counts.archived ? ' · ' + counts.archived + ' archived' : '');
+    document.getElementById('archiveNotice').innerHTML = viewingArchive
+      ? `<div class="banner watch"><span class="ico">📦</span><div><b>Viewing the archive.</b>
+         These entries are hidden from the normal view but nothing has been deleted.
+         <button class="btn tiny ghost" id="unarchiveBtn" style="margin-left:8px;">Restore all</button>
+         <button class="btn tiny ghost" id="purgeBtn" style="margin-left:6px;">Delete permanently</button></div></div>`
+      : '';
+  }
+
+  historyReloader = reloadHistory;
+
+  histPeriod.addEventListener('change', ()=>{
+    syncCustomRange();
+    saveUIState({ period: histPeriod.value });
+    reloadHistory();
+  });
+  histFrom.addEventListener('change', ()=>{ saveUIState({ from: histFrom.value }); reloadHistory(); });
+  histTo.addEventListener('change',   ()=>{ saveUIState({ to: histTo.value });   reloadHistory(); });
+
+  document.getElementById('viewArchiveBtn').addEventListener('click', async (ev)=>{
+    viewingArchive = !viewingArchive;
+    ev.target.textContent = viewingArchive ? 'Back to live' : 'View archive';
+    await reloadHistory();
+  });
+
+  /* Archiving is offered per period, and always exports first — the log is
+     the audit trail, so nothing leaves the view without a copy on disk. */
+  document.getElementById('archiveBtn').addEventListener('click', async ()=>{
+    const choice = prompt(
+      'Archive entries older than:\n\n' +
+      '  1  — one week ago\n' +
+      '  2  — one month ago\n' +
+      '  3  — one quarter ago\n' +
+      '  4  — one year ago\n\n' +
+      'Type 1, 2, 3 or 4. Archived entries are hidden, not deleted — you can restore them.',
+      '2'
+    );
+    if (!choice) return;
+    const now = new Date();
+    const cutoff = new Date(now);
+    if (choice.trim() === '1')      cutoff.setDate(now.getDate() - 7);
+    else if (choice.trim() === '2') cutoff.setMonth(now.getMonth() - 1);
+    else if (choice.trim() === '3') cutoff.setMonth(now.getMonth() - 3);
+    else if (choice.trim() === '4') cutoff.setFullYear(now.getFullYear() - 1);
+    else { toast('Not archived', 'Please type 1, 2, 3 or 4.', 'err'); return; }
+
+    try{
+      const blob = new Blob([JSON.stringify(await Store.exportAll(), null, 2)], {type:'application/json'});
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'fuelshine-backup-before-archive-' + new Date().toISOString().slice(0,10) + '.json';
+      a.click(); URL.revokeObjectURL(a.href);
+
+      const n = await Store.archiveOlderThan(cutoff.toISOString());
+      await reloadHistory();
+      toast(n ? n + ' entr' + (n===1?'y':'ies') + ' archived' : 'Nothing to archive',
+        n ? 'A full backup downloaded first. Use "View archive" to see or restore them.'
+          : 'No entries are older than that cutoff.', n ? 'ok' : undefined);
+    }catch(e){
+      toast('Archive failed', e.message, 'err');
+    }
+  });
+
+  /* Restore / permanent delete live inside the archive banner. */
+  document.getElementById('archiveNotice').addEventListener('click', async (ev)=>{
+    if (ev.target.id === 'unarchiveBtn'){
+      await Store.unarchiveAll();
+      await reloadHistory();
+      toast('Restored', 'Archived entries are back in the main view.', 'ok');
+    }
+    if (ev.target.id === 'purgeBtn'){
+      const counts = await Store.historyCounts();
+      if (!counts.archived){ toast('Nothing to delete', 'The archive is empty.'); return; }
+      const typed = prompt(
+        'This permanently deletes ' + counts.archived + ' archived entr' +
+        (counts.archived===1?'y':'ies') + '.\n\n' +
+        'This cannot be undone and breaks the audit trail for that period.\n\n' +
+        'Type DELETE to confirm.');
+      if (typed !== 'DELETE'){ toast('Canceled', 'Nothing was deleted.'); return; }
+      try{
+        const n = await Store.purgeArchived();
+        await reloadHistory();
+        toast(n + ' entries deleted', 'Permanently removed from the archive.', 'ok');
+      }catch(e){
+        toast('Delete failed', e.message, 'err');
+      }
+    }
+  });
 
   document.getElementById('exportBtn').addEventListener('click', async ()=>{
     const blob = new Blob([JSON.stringify(await Store.exportAll(), null, 2)], {type:'application/json'});
@@ -865,6 +1030,10 @@ async function init(){
   const ui = readUIState();
   if (ui.week && WEEKS.some(w=>w.n===Number(ui.week))) weekSel.value = String(ui.week);
   if (ui.filter != null) histFilter.value = ui.filter;
+  if (ui.period) histPeriod.value = ui.period;
+  if (ui.from) histFrom.value = ui.from;
+  if (ui.to) histTo.value = ui.to;
+  syncCustomRange();
   if (ui.note) noteInput.value = ui.note;
   showTab(['gf','fv','fr'].includes(ui.tab) ? ui.tab : 'gf');
 

@@ -216,20 +216,104 @@ export const Store = {
 
   /* ===== history ===== */
 
-  /** Unified change log, newest first. filter: {scope, refKey}. */
+  /** Unified change log, newest first. filter: {scope, refKey, from, to, archived}. */
   async loadHistory(filter){
     const f = filter || {};
     if (MODE === 'supabase'){
-      let q = 'change_log?select=id,scope,ref_key,ref_label,version_no,data,changes,editor,note,created_at';
+      let q = 'change_log?select=id,scope,ref_key,ref_label,version_no,data,changes,editor,note,created_at,archived';
       if (f.scope)  q += '&scope=eq.' + f.scope;
       if (f.refKey) q += '&ref_key=eq.' + encodeURIComponent(f.refKey);
-      q += '&order=created_at.desc&limit=400';
+      if (f.from)   q += '&created_at=gte.' + encodeURIComponent(f.from);
+      if (f.to)     q += '&created_at=lte.' + encodeURIComponent(f.to);
+      q += '&archived=is.' + (f.archived ? 'true' : 'false');
+      q += '&order=created_at.desc&limit=500';
       return (await sbFetch(q, { headers: sbHeaders() })) || [];
     }
     let rows = lsRead(LS_LOG, []);
+    rows = rows.filter(r => Boolean(r.archived) === Boolean(f.archived));
     if (f.scope)  rows = rows.filter(r => r.scope === f.scope);
     if (f.refKey) rows = rows.filter(r => String(r.ref_key) === String(f.refKey));
-    return rows.sort((a,b)=> (a.created_at < b.created_at ? 1 : -1)).slice(0, 400);
+    if (f.from)   rows = rows.filter(r => r.created_at >= f.from);
+    if (f.to)     rows = rows.filter(r => r.created_at <= f.to);
+    return rows.sort((a,b)=> (a.created_at < b.created_at ? 1 : -1)).slice(0, 500);
+  },
+
+  /** How many entries exist, split live vs archived — drives the counters. */
+  async historyCounts(){
+    if (MODE === 'supabase'){
+      const head = async archived => {
+        const res = await fetch(
+          SUPABASE_URL.replace(/\/$/,'') + '/rest/v1/change_log?select=id&archived=is.' + archived,
+          { headers: sbHeaders({ 'Prefer':'count=exact', 'Range':'0-0' }) }
+        );
+        const cr = res.headers.get('content-range') || '';
+        return Number((cr.split('/')[1]) || 0);
+      };
+      return { live: await head('false'), archived: await head('true') };
+    }
+    const rows = lsRead(LS_LOG, []);
+    return {
+      live: rows.filter(r=>!r.archived).length,
+      archived: rows.filter(r=>r.archived).length
+    };
+  },
+
+  /**
+   * Archive entries older than a cutoff. Archiving HIDES rows from the
+   * default view; it never destroys them, so the audit trail stays whole
+   * and can be brought back by viewing the archive.
+   * @returns {number} how many were archived
+   */
+  async archiveOlderThan(cutoffISO){
+    const doomed = await this.loadHistory({ to: cutoffISO });
+    if (!doomed.length) return 0;
+
+    if (MODE === 'supabase'){
+      await sbFetch('change_log?created_at=lte.' + encodeURIComponent(cutoffISO) + '&archived=is.false', {
+        method:'PATCH', headers: sbHeaders({ 'Prefer':'return=minimal' }),
+        body: JSON.stringify({ archived: true })
+      });
+      return doomed.length;
+    }
+    const rows = lsRead(LS_LOG, []);
+    let n = 0;
+    rows.forEach(r => { if (!r.archived && r.created_at <= cutoffISO){ r.archived = true; n++; } });
+    lsWrite(LS_LOG, rows);
+    return n;
+  },
+
+  /** Bring archived entries back into the live view. */
+  async unarchiveAll(){
+    if (MODE === 'supabase'){
+      await sbFetch('change_log?archived=is.true', {
+        method:'PATCH', headers: sbHeaders({ 'Prefer':'return=minimal' }),
+        body: JSON.stringify({ archived: false })
+      });
+      return;
+    }
+    const rows = lsRead(LS_LOG, []);
+    rows.forEach(r => { r.archived = false; });
+    lsWrite(LS_LOG, rows);
+  },
+
+  /**
+   * Permanently delete archived entries. This is the only destructive
+   * operation in the tool and cannot be undone — the UI exports first and
+   * demands a typed confirmation before calling it.
+   * @returns {number} how many were deleted
+   */
+  async purgeArchived(){
+    const doomed = await this.loadHistory({ archived:true });
+    if (!doomed.length) return 0;
+    if (MODE === 'supabase'){
+      await sbFetch('change_log?archived=is.true', {
+        method:'DELETE', headers: sbHeaders({ 'Prefer':'return=minimal' })
+      });
+      return doomed.length;
+    }
+    const rows = lsRead(LS_LOG, []).filter(r => !r.archived);
+    lsWrite(LS_LOG, rows);
+    return doomed.length;
   },
 
   /** Re-save an old version's values as a new version. History is never destroyed. */

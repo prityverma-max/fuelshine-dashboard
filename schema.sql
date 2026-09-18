@@ -36,21 +36,30 @@ create table if not exists public.change_log (
   changes     jsonb not null default '[]'::jsonb,
   editor      text,
   note        text,
-  created_at  timestamptz not null default now()
+  created_at  timestamptz not null default now(),
+  -- Archived entries are hidden from the default view but NOT deleted.
+  -- Purging them is a separate, explicit action in the UI.
+  archived    boolean not null default false
 );
 
 create index if not exists change_log_ref_idx
   on public.change_log (scope, ref_key, version_no desc);
 create index if not exists change_log_created_idx
   on public.change_log (created_at desc);
+create index if not exists change_log_archived_idx
+  on public.change_log (archived, created_at desc);
+
+-- Existing installs: add the column without losing any history.
+alter table public.change_log
+  add column if not exists archived boolean not null default false;
 
 -- -------------------------------------------------------------------
 -- Row level security.
 --
 -- This is an internal team tool with no login, so the anon key is
 -- allowed to read and write the tables above — and nothing else in your
--- project. Deletes and updates on change_log are NOT granted, which is
--- what makes the audit trail tamper-resistant from the browser.
+-- project. See the note above the change_log policies for the archiving
+-- trade-off.
 --
 -- If you later add Supabase Auth, tighten `using (true)` to
 -- `using (auth.role() = 'authenticated')`.
@@ -76,6 +85,18 @@ create policy trackers_update on public.trackers for update using (true) with ch
 
 drop policy if exists log_read  on public.change_log;
 drop policy if exists log_write on public.change_log;
+drop policy if exists log_archive on public.change_log;
+drop policy if exists log_purge   on public.change_log;
+
 create policy log_read  on public.change_log for select using (true);
 create policy log_write on public.change_log for insert with check (true);
--- Deliberately no update/delete policy: history is append-only.
+
+-- Archiving needs UPDATE, and clearing the archive needs DELETE.
+-- Note the trade-off this introduces: with these policies the log is no
+-- longer strictly append-only from the browser. The UI compensates by
+-- exporting a full backup before archiving and demanding a typed
+-- confirmation before any permanent delete. If you would rather the audit
+-- trail be tamper-proof, drop the two policies below — archiving and
+-- purging will then fail, and the log can only ever grow.
+create policy log_archive on public.change_log for update using (true) with check (true);
+create policy log_purge   on public.change_log for delete using (archived = true);
