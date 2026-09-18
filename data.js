@@ -244,8 +244,7 @@ export const TEXT_FIELDS = new Set(FIELD_DEFS.filter(f => f[2]==='text' || f[2]=
    ok = green, watch = amber, risk = red, '' = neutral gray. */
 
 export const STATUS_SETS = {
-  /* IP & legal — US legal-ops workflow. "Registered" is the correct term
-     for a granted trademark or copyright registration. */
+  /* IP & legal — US legal-ops workflow, for rows that are ACTIONS. */
   ip: [
     ['not-started','Not Started',   ''],
     ['counsel','Under Review',      'watch'],
@@ -254,21 +253,47 @@ export const STATUS_SETS = {
     ['registered','Registered',     'ok'],
     ['no-action','Closed',          '']
   ],
-  /* Associations & events — partnership BD pipeline. "Passed" is the
-     standard US term for a mutual no, and carries no blame. */
+  /* Settled decisions — rows whose content is "do NOT do this, because X".
+     Staging those through an action pipeline is nonsense: a row that reads
+     "Do not file on Trip Trust Score" can never be "Filed". What actually
+     needs tracking is whether the reasoning still holds. */
+  decision: [
+    ['settled','Decision Stands',   'ok'],
+    ['revisit','Needs Revisit',     'watch'],
+    ['reopened','Reopened',         'risk']
+  ],
+  /* Associations & events — access-ask BD pipeline, with a post-event state
+     so a conference that has happened stops reading as still upcoming. */
   assoc: [
     ['not-started','Not Started',   ''],
     ['outreach','Outreach Sent',    'watch'],
     ['in-discussion','Engaged',     'watch'],
     ['confirmed','Committed',       'ok'],
+    ['attended','Attended',         'ok'],
     ['not-proceeding','Passed',     'risk'],
     ['deferred','On Hold',          '']
   ],
-  /* Channels — growth-team lifecycle for an acquisition channel. */
+  /* Commercial partners — fuel-card issuers, brokers/MGAs, leasing companies.
+     Deliberately NOT the same set as associations. The standing rule is that
+     these are a different motion: the ask here is referral / revenue-share,
+     so the terminal state is a signed agreement. Associations get access
+     asks and end at Committed/Attended. Sharing one set would blur exactly
+     the distinction the plan says never to blend. */
+  partner: [
+    ['not-started','Not Started',       ''],
+    ['outreach','Outreach Sent',        'watch'],
+    ['in-discussion','In Discussion',   'watch'],
+    ['agreed','Agreement Signed',       'ok'],
+    ['not-proceeding','Passed',         'risk'],
+    ['deferred','On Hold',              '']
+  ],
+  /* Channels — growth-team lifecycle. "Active" rather than "Scaling":
+     a channel can be running steadily without scaling, and the stronger
+     word would overstate what the dashboard actually evidences. */
   channel: [
     ['not-started','Not Started',   ''],
     ['piloting','Testing',          'watch'],
-    ['active','Scaling',            'ok'],
+    ['active','Active',             'ok'],
     ['on-hold','Paused',            'watch'],
     ['discontinued','Discontinued', 'risk']
   ],
@@ -282,6 +307,37 @@ export const STATUS_SETS = {
   ]
 };
 
+/* Per-row overrides.
+
+   Most rows use their table's status set. These do not, because their own
+   content settles the question:
+
+   - IP rows 5-8 are conclusions ("not patentable", "blocked by prior art",
+     "do not file", "excluded"), not tasks.
+   - Channel 11 is "Paid acquisition", whose own rule is "do not spend in
+     this window" — an action pipeline would invite contradicting it.
+
+   The DEFAULTS below are only set where the plan text already states the
+   state in words. Nothing here asserts a fact the plan does not. */
+export const ROW_STATUS_OVERRIDES = {
+  // Conclusions, not tasks — see the `decision` set above.
+  'ip:5': 'decision', 'ip:6': 'decision', 'ip:7': 'decision', 'ip:8': 'decision',
+  'chan:11': 'decision',
+  // Named commercial-partner motions: the ask is referral / revenue-share,
+  // so these track to a signed agreement, not a channel lifecycle.
+  'chan:2': 'partner', 'chan:3': 'partner', 'chan:4': 'partner'
+};
+
+export const ROW_STATUS_DEFAULTS = {
+  // "Do not spend in this window" / "not a Fuelshine product" — stated.
+  'ip:5':'settled', 'ip:6':'settled', 'ip:7':'settled', 'ip:8':'settled',
+  'chan:11':'settled',
+  // "Already-paying or already-engaged accounts" — stated in the row.
+  'chan:1':'active',
+  // "Phase 2 test only — not resourced this sprint" — stated in the row.
+  'fvvert:5':'on-hold'
+};
+
 /* Which status set each tracked table uses, and the label shown in the change log. */
 export const TRACKER_GROUPS = {
   ip:      { set:'ip',       label:'IP action' },
@@ -291,6 +347,14 @@ export const TRACKER_GROUPS = {
   gfvert:  { set:'vertical', label:'Grey-fleet vertical' }
 };
 
+/** The status set a given row uses — its override, else its table's set. */
+export function setForRow(key, group){
+  return ROW_STATUS_OVERRIDES[key] || (TRACKER_GROUPS[group] || {}).set;
+}
+/** The value a row shows before anyone has touched it. */
+export function defaultForRow(key, setName){
+  return ROW_STATUS_DEFAULTS[key] || (STATUS_SETS[setName] || [['']])[0][0];
+}
 export function statusLabel(setName, value){
   const row = (STATUS_SETS[setName]||[]).find(s => s[0] === value);
   return row ? row[1] : (value || '—');

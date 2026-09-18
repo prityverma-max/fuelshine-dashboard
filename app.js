@@ -8,7 +8,7 @@ import {
   PHASES, CHANNELS, ASSOC_PRIORITY, ASSOC_WATCHLIST, VERTICALS, GF_VERTICALS,
   LENSES, RULES, TEAM, GAPS, LEADLINES, DISCOVERY, OBJECTIONS, MOAT_ROWS,
   FORM_IDS, FIELD_KINDS, TEXT_FIELDS,
-  STATUS_SETS, TRACKER_GROUPS, statusLabel, statusClass
+  STATUS_SETS, TRACKER_GROUPS, statusLabel, statusClass, setForRow, defaultForRow
 } from './data.js';
 import { EDITORS } from './config.js';
 import { Store } from './store.js';
@@ -138,9 +138,10 @@ function trim(text, max){
 
 /** The <td> holding a status control + note for one tracked row. */
 function statusCell(group, key, itemLabel, trackers){
-  const setName = TRACKER_GROUPS[group].set;
+  // A row may override its table's status set — see ROW_STATUS_OVERRIDES.
+  const setName = setForRow(key, group);
   const cur = trackers[key] || { status:'', note:'' };
-  const value = cur.status || STATUS_SETS[setName][0][0];
+  const value = cur.status || defaultForRow(key, setName);
   const opts = STATUS_SETS[setName].map(([v,l]) =>
     `<option value="${v}" ${v===value?'selected':''}>${l}</option>`).join('');
   const meta = cur.updatedBy
@@ -417,10 +418,10 @@ function fmtChange(entry, c, which){
   if (entry.scope === 'tracker'){
     if (c.field === 'status'){
       const group = String(entry.ref_key).split(':')[0];
-      const setName = (TRACKER_GROUPS[group] || {}).set;
-      // A row never touched has no stored status, but the dropdown has been
-      // showing its first option all along — so report that, not "(none)".
-      const shown = raw === '' ? (STATUS_SETS[setName] || [[]])[0][0] : raw;
+      const setName = setForRow(entry.ref_key, group);
+      // A row never touched has no stored status, but the chip has been
+      // showing its default all along — so report that, not "(none)".
+      const shown = raw === '' ? defaultForRow(entry.ref_key, setName) : raw;
       return statusLabel(setName, shown);
     }
     return raw === '' ? '(blank)' : String(raw);
@@ -679,18 +680,48 @@ let viewingArchive = false;
 let historyReloader = null;
 
 async function refreshEverything(){
-  const [weeks, trackers] = await Promise.all([
-    Store.loadWeeks(),
-    Store.loadTrackers()
-  ]);
+  /* The database can be unreachable — an outage, a paused project, or just
+     bad wifi. When that happens the plan content must still render and stay
+     readable; only the saved numbers are missing. So failures here are
+     reported in the banner rather than thrown, which would blank the page. */
+  let weeks = [], trackers = {};
+  try{
+    [weeks, trackers] = await Promise.all([Store.loadWeeks(), Store.loadTrackers()]);
+    dataReachable = true;
+  }catch(e){
+    dataReachable = false;
+    console.error('Could not load saved data:', e);
+    showConnectionProblem(e.message);
+  }
   renderAll(weeks);
   renderTrackedTables(trackers);
-  if (historyReloader) await historyReloader();
-  else renderHistory(await Store.loadHistory(currentHistFilter()));
+  try{
+    if (historyReloader) await historyReloader();
+    else renderHistory(await Store.loadHistory(currentHistFilter()));
+  }catch(e){
+    console.error('Could not load history:', e);
+    renderHistory([]);
+  }
+}
+
+let dataReachable = true;
+
+/** Replaces the connection banner with a clear, actionable failure message. */
+function showConnectionProblem(detail){
+  document.getElementById('connBanner').innerHTML =
+    `<div class="banner risk"><span class="ico">&#9888;</span><div>
+      <b>Can't reach the database.</b> The plan below is still readable, but saved
+      numbers and history can't load, and saving will fail until the connection is back.
+      Check your internet, then use Refresh. If it persists, confirm the Supabase
+      project is running.
+      <div style="margin-top:6px; color:var(--muted); font-size:var(--fs-2xs);">${esc(detail||'')}</div>
+    </div></div>`;
 }
 
 async function loadWeekIntoForm(n){
-  const w = await Store.loadWeek(n);
+  let w = null;
+  try{ w = await Store.loadWeek(n); }
+  catch(e){ console.error('Could not load week', n, e); }
   currentBaseline = w;
   setFormValues(w);
 
@@ -804,7 +835,7 @@ async function init(){
         key, label, { status: sel.value, note: noteEl.value.trim() }, editorSel.value
       );
       const chip = row.querySelector('.statuschip');
-      if (chip) chip.className = 'statuschip ' + statusClass(TRACKER_GROUPS[group].set, sel.value);
+      if (chip) chip.className = 'statuschip ' + statusClass(setForRow(key, group), sel.value);
       if (changes.length){
         flash.textContent = 'saved';
         flash.className = 'flash show';
@@ -845,8 +876,12 @@ async function init(){
   }
 
   async function reloadHistory(){
-    renderHistory(await Store.loadHistory(currentHistFilter()));
-    const counts = await Store.historyCounts();
+    let rows = [], counts = { live:0, archived:0 };
+    try{
+      rows = await Store.loadHistory(currentHistFilter());
+      counts = await Store.historyCounts();
+    }catch(e){ console.error('Could not load history:', e); }
+    renderHistory(rows);
     document.getElementById('histCount').textContent =
       viewingArchive
         ? counts.archived + ' archived'
