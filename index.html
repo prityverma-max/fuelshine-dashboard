@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Fuelshine · 90-Day Sprint</title>
-<meta name="description" content="Fuelshine 90-day CEO operating plan — two acquisition motions and the raise, tracked in one weekly sprint.">
+<title>Fuelshine · Sprint 01</title>
+<meta name="description" content="Fuelshine Sprint 01 (17 weeks) CEO operating plan — two acquisition motions and the raise, tracked in one weekly sprint.">
 <meta name="theme-color" content="#6DB43A">
 <link rel="icon" href="logo.png" type="image/png">
 <link rel="apple-touch-icon" href="logo.png">
@@ -21,17 +21,18 @@
     <nav class="navlinks" id="navlinks" aria-label="Sections">
       <a href="#northstar">North star</a>
       <a href="#sprint">Entry</a>
+      <a href="#variance">Plan vs actual</a>
       <a href="#history">History</a>
       <a href="#phases">Phases</a>
-      <a href="#channels">Channels</a>
+      <a href="#channels">GTM</a>
       <a href="#messaging">Messaging</a>
       <a href="#investors">Investors</a>
       <a href="#moat">Moat</a>
       <a href="#rules">Rules</a>
     </nav>
-    <div class="daypill" title="Day of the 90-day sprint">
+    <div class="daypill" title="Day of Sprint 01 (Sep 28, 2026 → Jan 24, 2027)">
       <span class="n num" id="dayNum">—</span>
-      <span class="l">/ 90</span>
+      <span class="l">/ 119</span>
     </div>
   </div>
 </header>
@@ -39,8 +40,8 @@
 <div class="wrap" id="top">
 
   <div class="pagehead">
-    <h1>90-Day CEO Operating Plan</h1>
-    <div class="sub">Two acquisition motions and the raise, tracked in one weekly sprint · Sep 10 → Dec 8, 2026 · running alongside the AltaLab (AltaIR Capital) Fall 2026 cohort</div>
+    <h1>Sprint 01 CEO Operating Plan</h1>
+    <div class="sub">Two acquisition motions and the raise, tracked in one weekly sprint · 17 weeks, Mon Sep 28, 2026 → Sun Jan 24, 2027 · goal $8,000 MRR by week 17 (stretch $10,000) · running alongside the AltaLab (AltaIR Capital) Fall 2026 cohort</div>
   </div>
 
   <div id="connBanner"></div>
@@ -57,12 +58,13 @@
               <circle cx="52" cy="52" r="45" fill="none" stroke="var(--border)" stroke-width="9"/>
               <circle id="ringProgress" cx="52" cy="52" r="45" fill="none" stroke="var(--green)" stroke-width="9" stroke-linecap="round"/>
             </svg>
-            <div class="mid"><span class="v num" id="ringPct">0%</span><span class="u">of $8K floor</span></div>
+            <div class="mid"><span class="v num" id="ringPct">0%</span><span class="u">of $8K goal</span></div>
           </div>
           <div class="ringstat">
             <div class="row"><span>Cumulative MRR</span><b class="num" id="statCum">$0</b></div>
-            <div class="row"><span>Gap to $8K floor</span><b class="num" id="statGap">$8,000</b></div>
-            <div class="row"><span>Required pace / wk</span><b class="num" id="statPace">$615</b></div>
+            <div class="row"><span>Gap to $8K goal</span><b class="num" id="statGap">$8,000</b></div>
+            <div class="row"><span>Still needed for this week's plan</span><b class="num" id="statPace">—</b></div>
+            <div class="row hintrow"><span>Plan average ≈ $470/wk, back-loaded — deals take 30–60 days to close</span></div>
           </div>
         </div>
       </div>
@@ -75,6 +77,7 @@
           <div class="row"><span>Fuel-verification net MRR</span><b class="num" id="statFvMRR">$0</b></div>
           <div class="row"><span>Since last partner convo</span><b class="num" id="statPartnerDays">—</b></div>
         </div>
+        <div id="flagBanner"></div>
         <div id="escalationBanner"></div>
       </div>
 
@@ -86,12 +89,14 @@
               <circle cx="52" cy="52" r="45" fill="none" stroke="var(--border)" stroke-width="9"/>
               <circle id="ringFr" cx="52" cy="52" r="45" fill="none" stroke="var(--navy)" stroke-width="9" stroke-linecap="round"/>
             </svg>
-            <div class="mid"><span class="v num" id="frPct">0%</span><span class="u">of $1.65M floor</span></div>
+            <div class="mid"><span class="v num" id="frPct">0%</span><span class="u">of $1.6M ask</span></div>
           </div>
           <div class="ringstat">
             <div class="row"><span>Capital secured</span><b class="num" id="statFrSecured">$0</b></div>
+            <div class="row hintrow"><span id="statFrSplit">$0 committed · $0 wired</span></div>
             <div class="row"><span>Already raised</span><b class="num">CAD $285K</b></div>
-            <div class="row"><span>Target dilution</span><b class="num">≤20%</b></div>
+            <div class="row"><span>SAFE cap</span><b class="num">$12M post · $10–14M</b></div>
+            <div class="row"><span>Runway</span><b class="num" id="statRunway">—</b></div>
           </div>
         </div>
       </div>
@@ -107,21 +112,21 @@
       </div>
     </div>
 
-    <div class="banner risk"><span class="ico">⚠</span><div><b>Reconciliation gap:</b> the live Strategy Guide's Fundraising workflow still targets the superseded $1.5M / 8–12 week figure — update it to $1.65M–$1.84M to match the reconciled deck. Separately, this sprint's $8–10K MRR is well short of the Phase&nbsp;1 SAFE trigger (100 fleets / ~$18K MRR) — decide which number you lead investor conversations with.</div></div>
+    <div id="runwayBanner"></div>
+    <div class="banner"><span class="ico">ⓘ</span><div><b>Investor-facing consistency (Sprint 01 plan):</b> <span id="consistencyLine"></span></div></div>
   </section>
 
   <!-- ============ WEEKLY ENTRY ============ -->
   <section id="sprint">
     <div class="sechead">
-      <div><h2>Weekly entry</h2><p>One save per week across both acquisition motions and the raise — matches the Strategy Guide's own Monday investor-update cadence.</p></div>
+      <div><h2>Weekly entry</h2><p>One save per week, every Monday, following the plan's 7-step check. Investor updates go out in weeks 4, 8 and 12 (update #4 only if the pitch gate is missed).</p></div>
     </div>
 
     <div class="chartwrap">
-      <svg id="chartSvg" viewBox="0 0 900 280" style="width:100%; height:auto; min-width:600px;" role="img" aria-label="Cumulative MRR against the floor and stretch pace lines"></svg>
+      <svg id="chartSvg" viewBox="0 0 900 280" style="width:100%; height:auto; min-width:600px;" role="img" aria-label="Cumulative MRR against the Sprint 01 week-by-week plan target"></svg>
       <div class="legend">
         <span><i style="background:var(--green);"></i> Actual cumulative MRR</span>
-        <span><i style="background:var(--watch);"></i> $8K floor pace</span>
-        <span><i style="background:var(--muted-2);"></i> $10K stretch pace</span>
+        <span><i style="background:var(--navy);"></i> Sprint 01 plan target ($8K by week 17)</span>
       </div>
     </div>
 
@@ -148,6 +153,12 @@
       </div>
     </div>
 
+    <div id="weekPlan"></div>
+    <details class="mondaycheck" id="mondayCheck">
+      <summary>Every Monday — the plan's 7-step check</summary>
+      <ol id="mondaySteps"></ol>
+    </details>
+
     <div class="tabs" role="tablist" aria-label="Entry sections">
       <button class="tab" role="tab" id="tab-gf" aria-controls="panel-gf" aria-selected="true">
         <span class="badge">1</span> Grey fleet <span class="count" id="count-gf"></span>
@@ -158,6 +169,9 @@
       <button class="tab" role="tab" id="tab-fr" aria-controls="panel-fr" aria-selected="false">
         <span class="badge">3</span> Fundraising <span class="count" id="count-fr"></span>
       </button>
+      <button class="tab" role="tab" id="tab-op" aria-controls="panel-op" aria-selected="false">
+        <span class="badge">4</span> Ops &amp; runway <span class="count" id="count-op"></span>
+      </button>
     </div>
 
     <!-- GREY FLEET -->
@@ -167,45 +181,52 @@
       <div class="frow">
         <div class="field"><label for="f_gfNewMRR">New B2B MRR</label><input type="number" id="f_gfNewMRR" min="0" step="1" placeholder="0"><div class="hint">$15 / employee / mo</div></div>
         <div class="field"><label for="f_gfB2cMRR">New B2C MRR</label><input type="number" id="f_gfB2cMRR" min="0" step="1" placeholder="0"><div class="hint">$9.99 / sub</div></div>
-        <div class="field"><label for="f_gfChurn">Churned MRR</label><input type="number" id="f_gfChurn" min="0" step="1" placeholder="0"></div>
+        <div class="field"><label for="f_gfChurn">Churned MRR — fleets</label><input type="number" id="f_gfChurn" min="0" step="1" placeholder="0"></div>
+        <div class="field"><label for="f_gfChurnB2c">Churned MRR — drivers</label><input type="number" id="f_gfChurnB2c" min="0" step="1" placeholder="0"></div>
         <div class="field"><label for="f_gfFleets">New paying fleets</label><input type="number" id="f_gfFleets" min="0" step="1" placeholder="0"></div>
         <div class="field"><label for="f_gfSubs">New paid B2C subs</label><input type="number" id="f_gfSubs" min="0" step="1" placeholder="0"></div>
-        <div class="field"><label for="f_gfCacFleet">Realized CAC / fleet</label><input type="number" id="f_gfCacFleet" min="0" step="1" placeholder="0" data-ceil="850"><div class="hint">ceiling $850</div></div>
-        <div class="field"><label for="f_gfCacSub">Realized CAC / subscriber</label><input type="number" id="f_gfCacSub" min="0" step="1" placeholder="0" data-ceil="20"><div class="hint">ceiling $20</div></div>
-        <div class="field"><label for="f_gfOutbound">Outbound touches (SDR)</label><input type="number" id="f_gfOutbound" min="0" step="1" placeholder="0"></div>
+        <div class="field"><label for="f_gfCacFleet">Realized CAC / fleet</label><input type="number" id="f_gfCacFleet" min="0" step="1" placeholder="0" data-ceil="850"><div class="hint">limit $850</div></div>
+        <div class="field"><label for="f_gfCacSub">Realized CAC / paying driver</label><input type="number" id="f_gfCacSub" min="0" step="1" placeholder="0" data-ceil="20"><div class="hint">limit $20</div></div>
+        <div class="field"><label for="f_gfOutbound">Apollo outreach touches</label><input type="number" id="f_gfOutbound" min="0" step="1" placeholder="0"></div>
         <div class="field"><label for="f_gfDemos">Demos / trials booked</label><input type="number" id="f_gfDemos" min="0" step="1" placeholder="0"></div>
         <div class="field"><label for="f_gfWarm">Warm-intro convos</label><input type="number" id="f_gfWarm" min="0" step="1" placeholder="0"></div>
-        <div class="field"><label for="f_gfPartner">Strategic-partner convos</label><input type="number" id="f_gfPartner" min="0" step="1" placeholder="0"></div>
+        <div class="field"><label for="f_gfPartner">Partner convos</label><input type="number" id="f_gfPartner" min="0" step="1" placeholder="0"></div>
         <div class="field"><label for="f_gfJohn">3+ John accounts flagged</label><input type="number" id="f_gfJohn" min="0" step="1" placeholder="0"></div>
         <div class="field"><label for="f_gfTrialPaid">Trial → paid rate (%)</label><input type="number" id="f_gfTrialPaid" min="0" max="100" step="1" placeholder="0"></div>
         <div class="field">
           <label for="f_gfFocus">Channel focus this week</label>
           <select id="f_gfFocus">
             <option value="">—</option>
-            <option value="pilot-health">Pilot health &amp; expansion (Alcoa, Satguru)</option>
-            <option value="strategic-partners">Strategic partners</option>
-            <option value="demo-led">Demo-led inbound</option>
-            <option value="outbound-sdr">Outbound SDR</option>
-            <option value="john-flywheel">John community / flywheel</option>
-            <option value="content-seo">Content / SEO</option>
-            <option value="linkedin-abm">LinkedIn ABM</option>
-            <option value="industry-events">Industry events</option>
+            <option value="strategic-partners">Partnerships</option>
+            <option value="warm-intros">Warm intros</option>
+            <option value="apollo">Targeted Apollo outreach</option>
+            <option value="gated-audit">Gated audit inbound (test)</option>
+            <option value="driver-ads">Driver referral / ads (test)</option>
+            <optgroup label="Previous channel list (saved weeks only)" disabled>
+              <option value="pilot-health">Pilot health &amp; expansion</option>
+              <option value="demo-led">Demo-led inbound</option>
+              <option value="outbound-sdr">Outbound SDR</option>
+              <option value="john-flywheel">John community / flywheel</option>
+              <option value="content-seo">Content / SEO</option>
+              <option value="linkedin-abm">LinkedIn ABM</option>
+              <option value="industry-events">Industry events</option>
+            </optgroup>
           </select>
         </div>
       </div>
       <div class="field" style="margin-top:14px;">
         <label for="f_gfNotes">Notes — what changed, what's blocking</label>
-        <textarea id="f_gfNotes" placeholder="Log verbatim prospect language where you can — e.g. Alcoa expanding past the first 10 trucks"></textarea>
+        <textarea id="f_gfNotes" placeholder="Log verbatim prospect language where you can — e.g. HR manager at an HVAC firm worried about mileage disputes"></textarea>
       </div>
       <div class="tblwrap"><table>
-        <thead><tr><th>Week</th><th class="num">B2B add</th><th class="num">B2C add</th><th class="num">Churn</th><th class="num">Net</th><th class="num">Cumulative</th><th>Focus</th><th>CAC</th></tr></thead>
+        <thead><tr><th>Week</th><th class="num">B2B add</th><th class="num">B2C add</th><th class="num">Churn</th><th class="num">Net</th><th class="num">Cumulative</th><th>Focus</th><th>CAC</th><th>Updated by</th></tr></thead>
         <tbody id="gfHistoryBody"></tbody>
       </table></div>
     </div>
 
     <!-- FUEL VERIFICATION -->
     <div class="panel tabpanel" id="panel-fv" role="tabpanel" aria-labelledby="tab-fv" hidden>
-      <div class="panel-sub">Sarah-direct · $15/vehicle/mo · phone GPS + Smartcar OEM fuel-level/odometer cross-check · anchor pilot: Alcoa Traffic Control (confirmed paid, 10 vehicles connecting now, path to 100+ trucks)</div>
+      <div class="panel-sub">Sarah-direct · $15/vehicle/mo · phone GPS + Smartcar OEM fuel-level/odometer cross-check · anchor: Alcoa Traffic Control — 10 vehicles (count 10 until more are confirmed; paid amount to be confirmed) · plan: ~40 trucks by week 5, 100 by week 8</div>
       <div class="leadline">“$11,700/yr in time savings alone, before fraud is even a factor.” — open every conversation here, never with fraud. Confirmed floor: 5.5× ROI, 1.85mo payback (10 vehicles).</div>
       <div class="frow">
         <div class="field"><label for="f_fvNewMRR">New MRR</label><input type="number" id="f_fvNewMRR" min="0" step="1" placeholder="0"><div class="hint">$15 / vehicle / mo</div></div>
@@ -215,7 +236,7 @@
         <div class="field"><label for="f_fvDiscovery">Discovery calls</label><input type="number" id="f_fvDiscovery" min="0" step="1" placeholder="0"><div class="hint">across 5 verticals</div></div>
         <div class="field"><label for="f_fvDemos">Demos booked</label><input type="number" id="f_fvDemos" min="0" step="1" placeholder="0"></div>
         <div class="field"><label for="f_fvTrialPaid">Trial → paid rate (%)</label><input type="number" id="f_fvTrialPaid" min="0" max="100" step="1" placeholder="0"></div>
-        <div class="field"><label for="f_fvPartner">Partner convos</label><input type="number" id="f_fvPartner" min="0" step="1" placeholder="0"><div class="hint">HRAI / MCAO / LMDA / CHBA / OHCA</div></div>
+        <div class="field"><label for="f_fvPartner">Partner convos</label><input type="number" id="f_fvPartner" min="0" step="1" placeholder="0"><div class="hint">plan order: CPA / HRPA → HRAI / TRREB → broker + fuel-card/leasing</div></div>
         <div class="field"><label for="f_fvTestimonial">HVAC/trades testimonial</label>
           <select id="f_fvTestimonial"><option value="0">Not yet</option><option value="1">Secured</option></select>
         </div>
@@ -236,14 +257,14 @@
         <textarea id="f_fvNotes" placeholder="e.g. Discovery call surfaced a fuel-card issuer we should co-market with"></textarea>
       </div>
       <div class="tblwrap"><table>
-        <thead><tr><th>Week</th><th class="num">New MRR</th><th class="num">Churn</th><th class="num">Cumulative</th><th>Focus vertical</th><th>Testimonial</th><th>CAC</th></tr></thead>
+        <thead><tr><th>Week</th><th class="num">New MRR</th><th class="num">Churn</th><th class="num">Cumulative</th><th>Focus vertical</th><th>Testimonial</th><th>CAC</th><th>Updated by</th></tr></thead>
         <tbody id="fvHistoryBody"></tbody>
       </table></div>
     </div>
 
     <!-- FUNDRAISING -->
     <div class="panel tabpanel" id="panel-fr" role="tabpanel" aria-labelledby="tab-fr" hidden>
-      <div class="panel-sub">Vikash is sole owner of this workflow end to end · $1.65M–$1.84M two-phase SAFE · target dilution ≤20%</div>
+      <div class="panel-sub">Founder (Vikash) owns this workflow end to end · $1.6M USD pre-seed SAFE · $12M post-money cap (range $10–14M) · formal pitching only after the week-13 pitch gate</div>
       <div class="frow">
         <div class="field"><label for="f_frTouches">Investor touches sent</label><input type="number" id="f_frTouches" min="0" step="1" placeholder="0"></div>
         <div class="field"><label for="f_frTier1">Of which Tier 1</label><input type="number" id="f_frTier1" min="0" step="1" placeholder="0"><div class="hint">fit 8–9</div></div>
@@ -272,17 +293,84 @@
         <textarea id="f_frNotes" placeholder="e.g. Relay Ventures responded, call booked for next week"></textarea>
       </div>
       <div class="tblwrap"><table>
-        <thead><tr><th>Week</th><th class="num">Touches</th><th class="num">Responses</th><th class="num">Meetings held</th><th class="num">Term sheets</th><th class="num">Committed</th><th class="num">Closed</th><th>Focus path</th></tr></thead>
+        <thead><tr><th>Week</th><th class="num">Touches</th><th class="num">Responses</th><th class="num">Meetings held</th><th class="num">Term sheets</th><th class="num">Committed</th><th class="num">Closed</th><th>Focus path</th><th>Updated by</th></tr></thead>
         <tbody id="frHistoryBody"></tbody>
       </table></div>
     </div>
+
+    <!-- OPS & RUNWAY -->
+    <div class="panel tabpanel" id="panel-op" role="tabpanel" aria-labelledby="tab-op" hidden>
+      <div class="panel-sub">Steps 1, 4, 5, 6 and 7 of the Monday check · runway · pitch-gate inputs · paid-ad test numbers. Leave a number blank if it isn't known — never fill it with the target.</div>
+      <h4 class="eyebrow">Runway</h4>
+      <div class="frow">
+        <div class="field"><label for="f_opCash">Cash in bank ($)</label><input type="number" id="f_opCash" min="0" step="1" placeholder="0"><div class="hint">end of week</div></div>
+        <div class="field"><label for="f_opSpend">Monthly spend ($)</label><input type="number" id="f_opSpend" min="0" step="1" placeholder="0"><div class="hint">months left = cash ÷ spend</div></div>
+      </div>
+      <h4 class="eyebrow">Pitch-gate inputs</h4>
+      <div class="frow">
+        <div class="field"><label for="f_opPayingFleets">Total paying fleets</label><input type="number" id="f_opPayingFleets" min="0" step="1" placeholder="0"><div class="hint">gate needs 20+ (Alcoa counts as 1)</div></div>
+        <div class="field"><label for="f_opTopCustomer">Largest customer's MRR ($)</label><input type="number" id="f_opTopCustomer" min="0" step="1" placeholder="0"><div class="hint">gate: no customer over ~25%</div></div>
+      </div>
+      <div class="field" style="margin-top:6px;">
+        <label for="f_opDeals">New deals this week — source and hours spent</label>
+        <input type="text" id="f_opDeals" placeholder="e.g. Alcoa +30 trucks · source: Alcoa expansion · 3h  |  ABC HVAC 15 seats · CPA intro · 5h">
+      </div>
+      <h4 class="eyebrow" style="margin-top:16px;">PostHog flywheel signals</h4>
+      <div class="frow">
+        <div class="field"><label for="f_opSignups">Signups</label><input type="number" id="f_opSignups" min="0" step="1" placeholder="0"></div>
+        <div class="field"><label for="f_opActiveTrip">Active trip users</label><input type="number" id="f_opActiveTrip" min="0" step="1" placeholder="0"></div>
+        <div class="field"><label for="f_opHeavyUsers">Heavy work-email users to call</label><input type="number" id="f_opHeavyUsers" min="0" step="1" placeholder="0"><div class="hint">≥5 active days, ≥10 trips</div></div>
+      </div>
+      <div class="hint" style="margin:-4px 0 10px;">Companies with 3+ users on the same work-email domain go in Grey fleet → “3+ John accounts flagged”.</div>
+      <h4 class="eyebrow">Paid-ad tests (this week)</h4>
+      <div class="frow">
+        <div class="field"><label for="f_opAuditSpend">Gated audit spend ($)</label><input type="number" id="f_opAuditSpend" min="0" step="1" placeholder="0"></div>
+        <div class="field"><label for="f_opAuditLeads">Gated audit good-fit leads</label><input type="number" id="f_opAuditLeads" min="0" step="1" placeholder="0"></div>
+        <div class="field"><label for="f_opDriverSpend">Driver ads spend ($)</label><input type="number" id="f_opDriverSpend" min="0" step="1" placeholder="0"></div>
+        <div class="field"><label for="f_opDriverUsers">New active work-email users</label><input type="number" id="f_opDriverUsers" min="0" step="1" placeholder="0"></div>
+        <div class="field"><label for="f_opManagerIntros">Manager intros</label><input type="number" id="f_opManagerIntros" min="0" step="1" placeholder="0"></div>
+      </div>
+      <h4 class="eyebrow" style="margin-top:16px;">Weekly review</h4>
+      <div class="field">
+        <label for="f_opOneThing">The one thing that matters most this week</label>
+        <input type="text" id="f_opOneThing" placeholder="Lead with overall status, then the one thing — e.g. Alcoa step 1 slipped; get the 40-truck PO signed">
+      </div>
+      <div class="frow actions"><div class="field grow2"><label for="f_opAct1">Action 1</label><input type="text" id="f_opAct1" placeholder="e.g. Book CPA Ontario intro call"></div><div class="field"><label for="f_opOwn1">Owner</label><select id="f_opOwn1"><option value="">—</option><option>Founder</option><option>Tech</option><option>Vikash</option><option>Prity</option><option>Divjot</option><option>Dilli</option><option>Khalid</option><option>Nancy</option></select></div></div>
+      <div class="frow actions"><div class="field grow2"><label for="f_opAct2">Action 2</label><input type="text" id="f_opAct2" placeholder="e.g. Book CPA Ontario intro call"></div><div class="field"><label for="f_opOwn2">Owner</label><select id="f_opOwn2"><option value="">—</option><option>Founder</option><option>Tech</option><option>Vikash</option><option>Prity</option><option>Divjot</option><option>Dilli</option><option>Khalid</option><option>Nancy</option></select></div></div>
+      <div class="frow actions"><div class="field grow2"><label for="f_opAct3">Action 3</label><input type="text" id="f_opAct3" placeholder="e.g. Book CPA Ontario intro call"></div><div class="field"><label for="f_opOwn3">Owner</label><select id="f_opOwn3"><option value="">—</option><option>Founder</option><option>Tech</option><option>Vikash</option><option>Prity</option><option>Divjot</option><option>Dilli</option><option>Khalid</option><option>Nancy</option></select></div></div>
+      <div class="tblwrap"><table>
+        <thead><tr><th>Week</th><th class="num">Cash</th><th class="num">Monthly spend</th><th class="num">Months left</th><th class="num">Paying fleets</th><th class="num">Largest customer</th><th>Top 3 actions</th><th>Updated by</th></tr></thead>
+        <tbody id="opHistoryBody"></tbody>
+      </table></div>
+    </div>
+  </section>
+
+  <!-- ============ PLAN BENCHMARK & VARIANCE ============ -->
+  <section id="variance">
+    <div class="sechead">
+      <div><h2>Benchmark vs actual</h2><p>Each week's end-of-week MRR by line against the Sprint 01 weekly plan's reference traction benchmark. On pace = at or above target · Watch = 75–99% · Behind = under 75%, or Watch two weeks in a row. A week with no save is marked “Not reported” — never filled with the target. Mark each week <b>Achieved</b> or <b>Variance</b>; a variance needs a why.</p></div>
+    </div>
+    <div class="grid cols-2 plangrid2">
+      <div class="card"><h3>Week-17 MRR by line (plan)</h3><div id="planLines"></div><p class="planprice" id="planPrice"></p></div>
+      <div class="card"><h3>Gates this sprint</h3><div id="gateCards"></div></div>
+    </div>
+    <div class="banner watch"><span class="ico">ⓘ</span><div id="planExpectation"></div></div>
+    <div class="varsummary" id="varianceSummary"></div>
+    <div class="tblwrap"><table class="vartbl">
+      <thead><tr><th>Week · status</th><th>Grey fleet — fleets</th><th>Grey fleet — drivers</th><th>Fuel verification</th><th>Total MRR</th><th>Achieved?</th><th>Plan milestones</th></tr></thead>
+      <tbody id="varianceBody"></tbody>
+    </table></div>
+    <p class="varfoot" id="varOpening"></p>
+    <p class="varfoot">Weeks follow the Sprint 01 plan: week 1 = Mon Sep 28, 2026, week 17 = Mon Jan 18, 2027. Green row = this week. Amber rows are the week-8 checkpoint and the week-13 pitch gate. Every line is net of its own churn — net MRR is what counts.</p>
   </section>
 
   <!-- ============ CHANGE HISTORY ============ -->
   <section id="history">
     <div class="sechead">
       <div><h2>Change history</h2><p>Every weekly save and every status change — who, when, and exactly which fields moved. Nothing here is ever overwritten; restoring writes a new entry rather than erasing one.</p></div>
+      <button class="btn ghost tiny" id="histToggle" type="button" aria-controls="histBody" aria-expanded="true">Collapse</button>
     </div>
+    <div id="histBody">
     <div class="histbar">
       <div class="histfilters">
         <div class="field" style="min-width:170px;">
@@ -318,11 +406,12 @@
     </div>
     <div id="archiveNotice"></div>
     <div class="histlist" id="histList"></div>
+    </div>
   </section>
 
   <!-- ============ PHASES ============ -->
   <section id="phases">
-    <div class="sechead"><div><h2>The three phases</h2><p>Recompute the MRR and raise math at the end of every phase — adjust channel mix, never the targets, if behind pace.</p></div></div>
+    <div class="sechead"><div><h2>The three phases</h2><p>Phases break at the plan's own gates — the week-8 checkpoint (Nov 16) and the week-13 pitch gate (Dec 21). If a line is behind two weeks running, name the cause first: volume, conversion, or deal timing.</p></div></div>
     <div class="grid cols-3" id="phaseGrid"></div>
   </section>
 
@@ -336,12 +425,22 @@
 
   <!-- ============ CHANNELS ============ -->
   <section id="channels">
-    <div class="sechead"><div><h2>Channel stack</h2><p>Ranked by $ of MRR per hour of founder/team time — re-rank every 2 weeks on what is converting, not what is fun. Set each row's live status as it moves.</p></div></div>
-    <h4 class="eyebrow" style="margin:0 0 8px;">Grey fleet &amp; shared customer-growth channels</h4>
+    <div class="sechead"><div><h2>GTM Implementation</h2><p>Channel priority — most proven first, from the Sprint 01 plan. Set each row's live status as it moves. Outreach-led rows move through five stages: <b>1 ICP definition → 2 Messaging → 3 Outreach → 4 Analytics → 5 Outcome</b>.</p></div></div>
+    <h4 class="eyebrow" style="margin:0 0 8px;">Channel priority — most proven first</h4>
     <div class="tblwrap"><table>
-      <thead><tr><th>#</th><th>Channel</th><th>Live status</th><th>Owner</th><th>Cost</th><th>Why it's ranked here</th></tr></thead>
+      <thead><tr><th>#</th><th>Channel</th><th>Live status</th><th>Owner</th><th>Budget</th><th>How to run it this sprint</th></tr></thead>
       <tbody id="channelBody"></tbody>
     </table></div>
+    <p class="varfoot" id="channelExpectation"></p>
+
+    <h4 class="eyebrow" style="margin:22px 0 8px;">Paid ad rules</h4>
+    <div class="adpanel">
+      <div class="adgate"><div id="adGateText"></div><div id="adGateStatus"></div></div>
+      <div class="tblwrap"><table class="adtbl">
+        <thead><tr><th></th><th>Gated audit (inbound)</th><th>Driver ads (B2C → B2B)</th></tr></thead>
+        <tbody id="adRulesBody"></tbody>
+      </table></div>
+    </div>
 
     <h4 class="eyebrow" style="margin:22px 0 8px;">Grey fleet &amp; employee-reimbursement vertical ranking</h4>
     <div class="tblwrap"><table>
@@ -355,9 +454,9 @@
       <tbody id="verticalBody"></tbody>
     </table></div>
 
-    <div class="banner"><span class="ico">💡</span><div><b>Parallel vs. sequential — CEO call:</b> run both in parallel, but not as one undifferentiated motion. #1–#2 on the fuel-verification list (HVAC/Field Service, Last-mile delivery) and #3 on the grey-fleet list (Field Service/HVAC) are the <i>same underlying companies</i> — a single outbound touch into that overlap can open either conversation, which is the actual efficiency case for parallel targeting, not a reason to blend the pitch. Growth-engine still stages fuel-verification as EXPAND, not the current TARGET wedge, and grey fleet as the proven wedge with two live testimonials — so the split is: grey fleet stays the primary quota-bearing motion for Divjot/Prity's list-build and outbound, while fuel-verification rides the same HVAC/Field-Service door-opens opportunistically (Alcoa-style) rather than getting its own dedicated prospecting budget yet. CAC ceilings are shared, not additive ($850/fleet, $20/subscriber) — track realized CAC per motion weekly, and if fuel-verification pulls budget from grey-fleet pace for two straight weeks, cut back to sequential until grey-fleet MRR is back on pace.</div></div>
+    <div class="banner"><span class="ico">💡</span><div><b>Where the $8K comes from (plan):</b> fuel verification is the biggest line — $4,500 by week 17 (Alcoa 10 → 100 trucks = $1,500, plus ~10 new fleets of ~20 vehicles at $300/mo). Grey fleet adds $2,700 from ~12 fleets and $800 from ~80 paying drivers. HVAC / field service sits in both rankings, so one touch can open either conversation — but keep the pitches separate. Cost limits apply to every channel: $850 per fleet, $20 per paying driver; any channel over its limit two weeks in a row → cut or change it.</div></div>
 
-    <h4 class="eyebrow" style="margin:22px 0 8px;">Association &amp; event priority — Phase 1 (Days 1–30)</h4>
+    <h4 class="eyebrow" style="margin:22px 0 8px;">Partnership sequence — associations &amp; advisors (plan: CPAs + HRPA first, then HRAI / TRREB)</h4>
     <div class="tblwrap"><table>
       <thead><tr><th>#</th><th>Association / event</th><th>Live status</th><th>Date</th><th>Fit</th><th>Proof point</th><th>Simplest ask</th><th>Note</th></tr></thead>
       <tbody id="assocPriorityBody"></tbody>
@@ -366,7 +465,7 @@
       <thead><tr><th>On the radar, not this sprint's active list</th><th>Why</th></tr></thead>
       <tbody id="assocWatchlistBody"></tbody>
     </table></div>
-    <div class="banner risk"><span class="ico">⚠</span><div><b>Motion 6 discipline:</b> every row above is an access ask — a member-benefit listing, a sponsor/demo slot, a session — never a referral fee or revenue-share pitch. That language belongs to the fuel-card, insurance-broker, and leasing rows in the table above, not to an association or trusted advisor. Getting this backwards on a first touch reads as not understanding who they are.</div></div>
+    <div class="banner risk"><span class="ico">⚠</span><div><b>Motion 6 discipline:</b> every row above is an access ask — a member-benefit listing, a sponsor/demo slot, a session — never a referral fee or revenue-share pitch. That language belongs to the commercial partners (the one insurance broker and one fuel-card or leasing company in the plan), not to an association or trusted advisor. Getting this backwards on a first touch reads as not understanding who they are.</div></div>
   </section>
 
   <!-- ============ MESSAGING ============ -->
@@ -406,7 +505,7 @@
         <h3>ICP</h3>
         <div class="ringstat">
           <div class="row"><span>Stage</span><b class="num">Pre-seed</b></div>
-          <div class="row"><span>Thesis</span><b class="num">Mobility / SaaS / fintech / insurtech</b></div>
+          <div class="row"><span>Thesis</span><b class="num">Mobility / SaaS / fintech</b></div>
           <div class="row"><span>Geography</span><b class="num">Canada &amp; US</b></div>
           <div class="row"><span>Check size</span><b class="num">$100K–$500K</b></div>
         </div>

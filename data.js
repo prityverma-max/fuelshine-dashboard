@@ -3,73 +3,207 @@
    Edit this file to change plan copy; no other file needs touching.
    ------------------------------------------------------------------ */
 
-export const START = new Date('2026-09-10T00:00:00Z');
-
-export const WEEKS = [
-  {n:1, monday:'2026-09-14'},{n:2, monday:'2026-09-21'},{n:3, monday:'2026-09-28'},
-  {n:4, monday:'2026-10-05'},{n:5, monday:'2026-10-12'},{n:6, monday:'2026-10-19'},
-  {n:7, monday:'2026-10-26'},{n:8, monday:'2026-11-02'},{n:9, monday:'2026-11-09'},
-  {n:10, monday:'2026-11-16'},{n:11, monday:'2026-11-23'},{n:12, monday:'2026-11-30'},
-  {n:13, monday:'2026-12-07'}
-];
+/* Sprint 01 timeline — "Fuelshine Sprint 01 — Weekly Plan": 17 weeks,
+   Monday Sep 28 2026 → Sunday Jan 24 2027, $8,000 MRR by week 17
+   (stretch $10,000). Week n starts on the Monday listed. */
+export const START = new Date('2026-09-28T00:00:00Z');
+export const SPRINT_DAYS = 119;   // Sep 28 2026 → Jan 24 2027, inclusive
+export const WEEKS = Array.from({length:17}, (_, i) => {
+  const d = new Date(Date.UTC(2026, 8, 28 + i*7));
+  return { n:i+1, monday:d.toISOString().slice(0,10) };
+});
 
 export const FLOOR = 8000, STRETCH = 10000;
-export const CAC_FLEET_CEIL = 850, CAC_SUB_CEIL = 20;
-export const FR_FLOOR = 1650000, FR_STRETCH = 1840000;
 
+/* ------------------------------------------------------------------
+   Sprint 01 reference benchmark — week-by-week targets (end-of-week MRR
+   by line) and milestones, copied from "Fuelshine Sprint 01 — Weekly
+   Plan" (reference copy prepared Sep 26 2026). Plan week n = dashboard
+   week n (both start Mon Sep 28 2026); weeks are matched by date.
+   Edit here if the plan is re-issued.
+   ------------------------------------------------------------------ */
+export const PLAN_SOURCE = 'Sprint 01 Weekly Plan · reference copy Sep 26, 2026';
+export const PLAN_WEEKS = [
+  {pw:1,  monday:'2026-09-28', gfFleets:0,    gfDrivers:20,  fv:150,  total:170,
+   rev:'Tracking set up; Alcoa ask made; referral reward live',
+   raise:'Decide SAFE terms; confirm CAD $285K instrument/cap; fix dashboard',
+   actions:[['Make the Alcoa full-fleet expansion ask','Founder'],
+            ['Install PostHog on getfuelshine.com + app events and switch on the referral reward','Tech'],
+            ['Lock SAFE terms ($12M post-money, range $10–14M) and fix the investor dashboard numbers','Founder']],
+   also:'Prity starts the Apollo list (association members + 5 named industries only) so the first wave can go out in week 3.',
+   note:'Week 1 fuel verification assumes Alcoa’s 10 trucks at $15 ($150) — replace with the real paid amount once confirmed.'},
+  {pw:2,  monday:'2026-10-05', gfFleets:0,    gfDrivers:40,  fv:150,  total:190,
+   rev:'First 3 partner meetings booked (CPA/HRPA)',
+   raise:'Data room v1 (deck, unit economics, Alcoa proof); map Tier 1 warm-intro paths'},
+  {pw:3,  monday:'2026-10-12', gfFleets:0,    gfDrivers:60,  fv:150,  total:210,
+   rev:'Apollo list built, first wave out',
+   raise:'Build investor update list (20–30: CIAI / CI Ventures angels, Tier 1–2, scouts)'},
+  {pw:4,  monday:'2026-10-19', gfFleets:225,  gfDrivers:100, fv:150,  total:475,
+   rev:'First new grey-fleet fleet paid',
+   raise:'Investor update #1; ask existing angels about a runway top-up'},
+  {pw:5,  monday:'2026-10-26', gfFleets:225,  gfDrivers:140, fv:600,  total:965,
+   rev:'Alcoa step 1 (~40 trucks)',
+   raise:'3–5 relationship conversations/week — no ask'},
+  {pw:6,  monday:'2026-11-02', gfFleets:450,  gfDrivers:180, fv:900,  total:1530,
+   rev:'Gated audit test decision',
+   raise:'3–5 relationship conversations/week — no ask'},
+  {pw:7,  monday:'2026-11-09', gfFleets:450,  gfDrivers:230, fv:1200, total:1880,
+   rev:'At least 1 partner has sent a lead',
+   raise:'3–5 relationship conversations/week — no ask'},
+  {pw:8,  monday:'2026-11-16', gfFleets:675,  gfDrivers:280, fv:1500, total:2455,
+   rev:'CHECKPOINT · Alcoa at 100 trucks',
+   raise:'Investor update #2; set formal pitch start date', checkpoint:true,
+   rule:'Week 8 checkpoint: total MRR ≥ $2,000 → stay the course. Below $2,000 → move Prity from Apollo to partner follow-up and partner-sourced leads (not more cold email), and reset expectations: $8K by week 17 is now unlikely.'},
+  {pw:9,  monday:'2026-11-23', gfFleets:900,  gfDrivers:330, fv:1800, total:3030,
+   rev:'2–3 partners actively referring',
+   raise:'3–5 conversations/week; book 2+ portfolio-synergy intros'},
+  {pw:10, monday:'2026-11-30', gfFleets:1125, gfDrivers:380, fv:2100, total:3605,
+   rev:'', raise:'3–5 conversations/week; identify 1–2 possible leads'},
+  {pw:11, monday:'2026-12-07', gfFleets:1350, gfDrivers:430, fv:2400, total:4180,
+   rev:'', raise:'3–5 conversations/week'},
+  {pw:12, monday:'2026-12-14', gfFleets:1575, gfDrivers:480, fv:2700, total:4755,
+   rev:'Close all you can before holidays', raise:'Investor update #3'},
+  {pw:13, monday:'2026-12-21', gfFleets:1800, gfDrivers:540, fv:3000, total:5340,
+   rev:'PITCH GATE', raise:'PITCH GATE check', checkpoint:true,
+   rule:'Pitch gate: start formal pitching only if total MRR ≥ $5,000 AND MRR grew in 3 of the last 4 weeks AND 20+ paying fleets with no customer over ~25% of MRR (Alcoa included). If not met: keep building relationships, send update #4, re-test weekly.'},
+  {pw:14, monday:'2026-12-28', gfFleets:2025, gfDrivers:600, fv:3300, total:5925,
+   rev:'Holiday week — expect slippage', raise:'Holidays — finalize deck with real sprint numbers'},
+  {pw:15, monday:'2027-01-04', gfFleets:2250, gfDrivers:660, fv:3750, total:6660,
+   rev:'', raise:'Formal pitching: 6–8 meetings/week, Tier 2 first'},
+  {pw:16, monday:'2027-01-11', gfFleets:2475, gfDrivers:730, fv:4150, total:7355,
+   rev:'', raise:'Formal pitching; Tier 1 from this week'},
+  {pw:17, monday:'2027-01-18', gfFleets:2700, gfDrivers:800, fv:4500, total:8000,
+   rev:'Sprint close; investor traction package', raise:'Goal: first commitment or lead investor'}
+];
+
+/* Week-17 MRR by line, what it is made of, and the plan's own expectation. */
+export const PLAN_LINES = [
+  ['Fuel verification (company-owned)','$4,500','Alcoa grows 10 → 100 trucks by week 8 ($1,500) + ~10 new fleets of ~20 vehicles ($300/mo each)'],
+  ['Grey fleet — fleets','$2,700','~12 fleets of ~15 employees ($225/mo each)'],
+  ['Grey fleet — drivers','$800','~80 paying drivers at $9.99/mo'],
+  ['Total','$8,000','~22 new fleets + Alcoa expansion + ~80 drivers']
+];
+export const PLAN_PRICE = 'Price: $15 per vehicle or employee per month for fleets; $9.99/month per driver. Net new MRR needed ≈ $470/week on average, back-loaded because deals take 30–60 days to close.';
+export const PLAN_EXPECTATION = 'Honest expectation at sprint start: ranks 1–4 likely land $5K–7K MRR by week 17. Reaching $8K+ needs 2–3 partners actively sending fleets by about week 9.';
+
+/* Runway — months left = cash ÷ monthly spend. Red if cash runs out before
+   expected close + 3 months (base-case close weeks 26–30, Mar–Apr 2027). */
+export const CLOSE_WEEKS = 'weeks 26–30 (Mar–Apr 2027)';
+export const RUNWAY_NEEDED_UNTIL = '2027-07-25';   // end of week 30 (Apr 25 2027) + 3 months
+export const RUNWAY_FIXES = 'angel top-up, OVIN / IRAP, full-price Alcoa expansion';
+
+/* Paid ad rules — the plan's table, verbatim. */
+export const AD_RULES = {
+  gate: 'No ad spend of any kind until tracking is live (PostHog on the website with audit/lead/demo events and UTM capture; app events for share, invite, subscription start/cancel). Neither ad test replaces partnerships.',
+  rows: [
+    ['Start',        '$1,000–1,500/month', '$0 — referral reward first (free month per colleague or manager intro)'],
+    ['Add money',    '—',                  'Only after 30 days of referral data; then $500–1,000/month'],
+    ['Check at',     'Day 45',             'Day 30'],
+    ['Stop if',      'Cost per good-fit lead > $250', 'Cost per active work-email user > $40, or no manager intros'],
+    ['Increase if',  'Cost per good-fit lead < $150', '3+ colleagues at one company within 60 days'],
+    ['Base case (120-day sim, $6K spend)', '~$900 MRR', '~$800 MRR']
+  ]
+};
+
+/* Investor-facing consistency — the plan's line, verbatim. */
+export const INVESTOR_CONSISTENCY = '3 reps (never 4) · 10 Alcoa vehicles until more are confirmed · $850 CAC is a target, not an actual · insurance is out of this raise · always show sprint actuals separately from projections.';
+
+/* Every Monday — the plan's 7-step check, verbatim. */
+export const MONDAY_CHECK = [
+  'Get actuals: MRR by line, new vs lost MRR, new fleets + source, hours/$ per channel, partner conversations, raise activity, cash and monthly spend. Never fill a missing number with the target — mark it “not reported”.',
+  'Compare each line and the total to this week’s row; assign On pace / Watch / Behind.',
+  'Apply the decision rules: checkpoint, cost limits, ad rules, churn.',
+  'Check this week’s raise milestone and runway.',
+  'Pull PostHog flywheel signals: signups, active trip users, companies with 3+ users on the same work-email domain (warm B2B lead), heavy work-email users (≥5 active days, ≥10 trips) to call.',
+  'Write the short weekly review, leading with overall status and the one thing that matters most.',
+  'End with the top 3 actions for the coming week, each with an owner.'
+];
+
+/* MRR already running before the first week logged on this dashboard.
+   The plan's week-1 fuel-verification target ($150) is Alcoa's existing
+   10 trucks at $15. Either enter that MRR as week 1 "new MRR", or set
+   fv:150 here (or the real paid amount) — not both — so actuals are
+   compared like-for-like. Left at 0 until confirmed. */
+export const OPENING_MRR = { gfFleets:0, gfDrivers:0, fv:0 };
+
+/** The plan week whose Monday matches a dashboard week's Monday. */
+export function planFor(monday){
+  return PLAN_WEEKS.find(p => p.monday === monday) || null;
+}
+/** Plan status per the doc: On pace ≥100% of target · Watch 75–99% ·
+    Behind under 75%. (Watch two weeks running → Behind is applied by
+    the caller, which knows the previous week.) */
+export function planStatus(actual, target){
+  if (!target) return actual >= 0 ? 'ok' : 'risk';
+  const r = actual / target;
+  return r >= 1 ? 'ok' : r >= 0.75 ? 'watch' : 'risk';
+}
+
+export const CAC_FLEET_CEIL = 850, CAC_SUB_CEIL = 20;
+/* Raise — Sprint 01 plan: $1.6M USD pre-seed SAFE, $12M post-money cap
+   (range $10–14M), formal pitching only after the week-13 pitch gate. */
+export const FR_FLOOR = 1600000;
+export const SAFE_CAP = '$12M post-money (range $10–14M)';
+
+/* Three phases on the Sprint 01 timeline, split at the plan's own gates:
+   the week-8 checkpoint (Nov 16) and the week-13 pitch gate (Dec 21).
+   start/end drive the "NOW" badge. */
 export const PHASES = [
-  {tag:'Phase 1 &middot; Foundation', dates:'Sep 10 &ndash; Oct 9, 2026 &middot; Days 1&ndash;30',
-    gf:['Pilot health check on Alcoa and Satguru (Vikash + Prity) &mdash; confirm status and look for expansion room',
+  {tag:'Phase 1 &middot; Foundation &amp; first revenue', start:'2026-09-28', end:'2026-11-22',
+   dates:'Sep 28 &ndash; Nov 22, 2026 &middot; Weeks 1&ndash;8 &middot; ends at the week-8 checkpoint',
+    gf:['Week 1 (Tech): install PostHog on getfuelshine.com + app events, and switch on the driver referral reward (free month per colleague or manager intro)',
         'No canonically-confirmed named grey-fleet-only pilot exists in deck materials today &mdash; confirm the current trial roster this week rather than assuming one',
-        'SDR builds the target list across the 5 named verticals; first outbound wave by day 10',
+        'Prity starts the Apollo list in week 1 (association members + the 5 named industries only); first outbound wave in week 3 (Oct 12)',
         'Ship the &ldquo;3+ Johns at one employer&rdquo; flag, even as a manual weekly check'],
-    fv:['Open partner conversations across all 5 fuel-verification verticals in parallel (one light-touch Ontario Electrical League conversation only)',
+    fv:['Founder makes the Alcoa full-fleet expansion ask in week 1 (10 &rarr; ~40 trucks by week 5, 100 by week 8; escalate directly if not at 100 by week 8)',
+        'Partner conversations follow the plan&rsquo;s order &mdash; CPAs + HRPA first, then HRAI / TRREB, then one insurance broker and one fuel-card or leasing company',
         'Identify the warmest HVAC/trades prospect for the reserved testimonial slot',
         'Fold the fleet-card discovery question into every call to feed the Phase 2 card-API decision'],
-    fr:['Stand up the investor-outreach workflow: confirm ICP filters, open the data-room shell, set the Monday update cadence',
-        'Build/refresh the investor ICP and target list (Week 1 per the Strategy Guide) &mdash; work from the 70-firm CSV, do not re-research',
-        'This dashboard is live by end of phase &mdash; do not wait until behind pace to start measuring']},
-  {tag:'Phase 2 &middot; Pipeline &rarr; paid &amp; warm outreach', dates:'Oct 10 &ndash; Nov 8, 2026 &middot; Days 31&ndash;60',
-    gf:['Push every Phase-1 lead through the funnel; weekly check against the MRR math',
-        'Launch the lightweight in-app referral path for John &mdash; no driver should have to pitch Sarah alone'],
-    fv:['SDR outbound live across Ranks 1&ndash;4; fraud preempt in every demo',
+    fr:['Week 1: decide SAFE terms ($12M post-money, range $10&ndash;14M) and confirm the CAD $285K instrument/cap; week 2: data room v1; week 3: investor update list (20&ndash;30); week 4: investor update #1',
+        'Build/refresh the investor ICP and target list &mdash; work from the 70-firm CSV, do not re-research',
+        'Week 8 checkpoint (Nov 16): total MRR &ge; $2,000 &rarr; stay the course; below &rarr; move Prity to partner follow-up. Investor update #2 and set the formal pitch start date']},
+  {tag:'Phase 2 &middot; Partner-led growth &rarr; pitch gate', start:'2026-11-23', end:'2026-12-27',
+   dates:'Nov 23 &ndash; Dec 27, 2026 &middot; Weeks 9&ndash;13 &middot; ends at the week-13 pitch gate',
+    gf:['Push every Phase-1 lead through the funnel; weekly check against the plan&rsquo;s week-by-week targets',
+        'Driver ads: no ad money until 30 days of referral data; then the day-30 check decides (stop if cost per active work-email user &gt; $40 or no manager intros)'],
+    fv:['2&ndash;3 partners actively referring by week 9; outreach live across fuel-verification vertical ranks 1&ndash;4; fraud preempt in every demo',
         'Convert trials to paid with the Week-1 flag-clearing check-in tracked on every account',
         'Hard gate: one real HVAC/trades quote for the reserved testimonial slot before this phase closes'],
     fr:['Warm outreach live across the 5 paths; forwardable intro template in the hands of every connector',
-        'First pitch meetings &mdash; target 50% advance to DD, per the Strategy Guide\'s own goal',
-        'Day-45 checkpoint: recompute both MRR and capital-secured pace; shift to partnership-sourced batches if behind']},
-  {tag:'Phase 3 &middot; Close &amp; package', dates:'Nov 9 &ndash; Dec 8, 2026 &middot; Days 61&ndash;90',
+        'Relationship conversations only (3&ndash;5/week, no ask) &mdash; no formal pitching before the gate',
+        'Pitch gate (week 13, Dec 21): start formal pitching only if total MRR &ge; $5,000 AND MRR grew in 3 of the last 4 weeks AND 20+ paying fleets with no customer over ~25% of MRR']},
+  {tag:'Phase 3 &middot; Formal pitching &amp; close', start:'2026-12-28', end:'2027-01-24',
+   dates:'Dec 28, 2026 &ndash; Jan 24, 2027 &middot; Weeks 14&ndash;17 &middot; sprint close',
     gf:['Push remaining qualified grey-fleet pipeline to close &mdash; founder/team time on live deals, not new prospecting'],
     fv:['Recompute the vertical ranking for next sprint based on actual conversion, not fit score alone'],
-    fr:['Due diligence, data room, and term-sheet negotiation &mdash; target dilution &le;20%',
+    fr:['Formal pitching from week 15 (6&ndash;8 meetings/week, Tier 2 first; Tier 1 from week 16); goal by week 17: first commitment or lead investor &mdash; close window Jan 25 &rarr; Apr 2027',
         'Compile the traction package: MRR by product line, logo names, churn observed, CAC actually collected',
         'Flag explicitly which numbers are actuals from this sprint vs. projections in any investor material']}
 ];
 
+/* Channel priority — most proven first (Sprint 01 plan). Keys are new
+   ('plan:1'…'plan:6'); the previous 11-row channel stack (chan:*) is
+   retired, its saved statuses stay in the change history. */
 export const CHANNELS = [
-  ['Pilot health &amp; expansion &mdash; Alcoa, Satguru','Vikash + Prity','$0','Already-paying or already-engaged accounts &mdash; the fastest real MRR and the easiest upsell conversation.'],
-  ['Fuel-card partnerships &mdash; Fleetcor/Corpay Canada (rank 1, dual-motion into leasing too), Comdata/Fuelman (rank 2), WEX (rank 3, warm-intro only this quarter)','Vikash','Time only','Lead with the fraud/verification layer, live and Alcoa-proven &mdash; never coaching/rewards, that&rsquo;s roadmap. Concede OEM data is commoditized, pivot to the four-dimension cross-check + cross-issuer fraud dataset. Ask sequenced: referral/co-marketing now, Level III data integration only once card-adoption share is confirmed in discovery.'],
-  ['Insurance-broker partnerships &mdash; Zensurance (rank 1, Toronto SMB MGA), Mitch Insurance / Morison (rank 2, HVAC &amp; trades-adjacent), Acera (rank 3), BrokerLink (rank 4, long-shot, warm-intro only)','Vikash','Time only','Lead with verified exposure (odometer/location) &mdash; the only one of the three insurer pillars with a direct line to underwriting/claims/pricing. Fraud-control and EcoPoints are retention add-ons, not underwriting inputs &mdash; never blend them into the lead. Ask: a 30-minute conversation, not a demo; a small consented data-sharing pilot if it lands.'],
-  ['Fleet leasing &amp; rental partnerships &mdash; Foss National Leasing (rank 1, Canadian-owned, CFLA-adjacent), Merchants Fleet (rank 2, explicit SMB tiers), Enterprise Fleet Management (rank 3, tightest ICP match), Element (rank 4, deepest existing stack, sequence last)','Vikash','Time only','Two motions, don&rsquo;t blend: lead with distribution (their lessees already run their own fuel cards/mileage reimbursement &mdash; live product, Alcoa-reused proof point) before the Mileage-Cap Trajectory tool, which is roadmap, next-in-build, not demoable yet. Ask sequenced: referral/revenue-share now; a discovery conversation only on the trajectory tool, not a pilot.'],
-  ['Demo-led funnel &mdash; Inbound &rarr; SDR Qual &rarr; AE Demo (SLA: SDR &le;4h, Demo &le;7 days)','Prity','Time only','Prity covers qualify + demo + close solo &mdash; no dedicated SDR is the single biggest bottleneck in this funnel today.'],
-  ['Outbound SDR &mdash; email + LinkedIn multi-touch','Divjot (list-build) + Prity (send/qualify)','Time only','Divjot builds the target list against the right persona per motion &mdash; HR/Office Manager for grey fleet, Owner/GM or Finance/Ops Manager for HVAC/company-owned &mdash; one blended list undersells both. Route every artifact through sarah-persona-evaluator before it sends.'],
-  ['John community / Driver Championship flywheel','Divjot','$0&ndash;low','Real MRR at $9.99/sub now, plus compounding warm leads into Sarah &mdash; no BD support exists to close the resulting employer deals yet.'],
-  ['Content / SEO &mdash; IRS/CRA audit guides, ROI calculators, case studies','Prity','$0','Cheap and compounding, but slow &mdash; credibility and inbound trickle, not a 90-day mover.'],
-  ['LinkedIn ABM &mdash; targeted ads to Fleet Managers &amp; CFOs','Prity','Low','Medium priority per the Strategy Guide &mdash; layer on once the demo-led funnel has real conversion data.'],
-  ['Industry events &amp; associations &mdash; see the priority ranking below','Vikash','Cost + time','Motion 6, access-only &mdash; member listings, sponsor/demo slots, never referral-fee language (that&rsquo;s the fuel-card/broker/leasing rows above). No dedicated events lead, so this stays a founder-led credibility play, capped at the weekly floor of one partner/association conversation, not a volume channel.'],
-  ['Paid acquisition','&mdash;','&mdash;','Do not spend in this window &mdash; $850/fleet and $20/subscriber are post-raise targets, not proven numbers yet.']
+  ['Alcoa full-fleet expansion','Founder','&mdash;','Single biggest step in the plan: 10 &rarr; ~40 trucks by week 5, 100 by week 8. Escalate directly if not at 100 by week 8.'],
+  ['Partnerships','Founder','Time','CPAs + HRPA first, then HRAI / TRREB, then one insurance broker and one fuel-card or leasing company. At least one partner conversation every week &mdash; flag if 7+ days pass.<div class="subnote">Shortlists already researched &mdash; insurance broker: Zensurance, Mitch / Morison, Acera, BrokerLink · fuel-card: Corpay, Comdata / Fuelman, WEX · leasing: Foss National, Merchants Fleet, Enterprise, Element. The plan needs one broker and one fuel-card or leasing company this sprint.</div>'],
+  ['Warm intros','Founder','Time','Mentor / accelerator / investor network, plus active drivers with an employer email (first example: a Burton Industries driver, Sept 2026).'],
+  ['Targeted Apollo outreach','Prity','Time','Only association members and the 5 named industries &mdash; no generic spray. Run buyer-facing copy through the Sarah check before sending. List starts week 1; first wave out week 3.'],
+  ['Gated audit inbound','&mdash;','$1,000&ndash;1,500/mo once tracking is live','Test only. Paid ad rules apply (below): check at day 45 &mdash; stop if cost per good-fit lead &gt; $250, increase if &lt; $150.'],
+  ['Driver ads (B2C &rarr; B2B)','&mdash;','$0 now (referral reward); $500&ndash;1,000/mo after 30 days of referral data','Test only. Referral reward first; no ad money until 30 days of referral data. Check at day 30 &mdash; stop if cost per active work-email user &gt; $40 or no manager intros; increase if 3+ colleagues at one company within 60 days.']
 ];
 
 export const ASSOC_PRIORITY = [
-  [1,'HRAI AGM &mdash; &ldquo;The Unconventional Advantage&rdquo;','Sep 19&ndash;23, Gatineau QC','HVAC/Field Service &mdash; the #1 anchor vertical for fuel-verification and #3 for grey fleet','None yet','Member-benefit listing; sponsor/demo slot','Imminent &mdash; 3 days out as of this update. Pre-book 1:1s now; a booth without them is wasted founder time.'],
-  [2,'IBAOcon','Oct 21&ndash;22, Sheraton Centre Toronto','Trusted advisor + the clearest event-based path into the broker-upsell motion above','None yet','Sponsor/exhibit','120+ exhibitors, 3,000+ attendees &mdash; distinct from the Zensurance/Mitch/Morison commercial-broker row above; this is the association (access, not revenue).'],
-  [3,'HRPA Summit','Oct 19, Toronto/Ottawa','Trusted advisor (HR) &mdash; reaches Sarah&rsquo;s own peer community directly','None yet','Session/content sponsorship','Dual-city event.'],
-  [4,'MCAO S.M.A.R.T. Innovation','Nov 12, Hockey Hall of Fame, Toronto','Mechanical contractors, dual-flywheel &mdash; reinforces the HVAC/Field-Service overlap this sprint is already leaning on','None yet','Demo slot/sponsor table',''],
-  [5,'CPA Ontario 2026 conference series','Multiple ON dates','Trusted advisor (accounting) &mdash; Finance is part of the broadened Sarah buyer title','None yet','Co-branded client briefing; PD-conference session','Directory flags this &ldquo;strong &mdash; start here.&rdquo;']
+  [1,'CPA Ontario 2026 conference series','Multiple ON dates','Trusted advisor (accounting) &mdash; Finance is part of the broadened Sarah buyer title','None yet','Co-branded client briefing; PD-conference session','Directory flags this &ldquo;strong &mdash; start here.&rdquo;',5],
+  [2,'HRPA Summit','Oct 19, Toronto/Ottawa','Trusted advisor (HR) &mdash; reaches Sarah&rsquo;s own peer community directly','None yet','Session/content sponsorship','Dual-city event.',3],
+  [3,'HRAI AGM &mdash; &ldquo;The Unconventional Advantage&rdquo;','Sep 19&ndash;23, Gatineau QC','HVAC/Field Service &mdash; the #1 anchor vertical for fuel-verification and #3 for grey fleet','None yet','Member-benefit listing; sponsor/demo slot','The AGM ran Sep 19&ndash;23, before Sprint 01 &mdash; go to HRAI directly for the member-benefit listing. Plan order: after CPAs + HRPA.',1],
+  [4,'TRREB (Toronto Regional Real Estate Board)','REALTOR QUEST &mdash; date TBD','Real Estate &mdash; grey-fleet vertical #2','Urbanest Properties testimonial','Member-benefit listing or newsletter mention','Plan order: HRAI / TRREB after CPAs + HRPA. Don&rsquo;t wait on the event &mdash; pursue the listing now, proof-in-hand.',6],
+  [5,'IBAOcon','Oct 21&ndash;22, Sheraton Centre Toronto','Trusted advisor + the clearest event-based path into the broker-upsell motion above','None yet','Sponsor/exhibit','120+ exhibitors, 3,000+ attendees &mdash; distinct from the Zensurance/Mitch/Morison commercial-broker row above; this is the association (access, not revenue).',2],
+  [6,'MCAO S.M.A.R.T. Innovation','Nov 12, Hockey Hall of Fame, Toronto','Mechanical contractors, dual-flywheel &mdash; reinforces the HVAC/Field-Service overlap this sprint is already leaning on','None yet','Demo slot/sponsor table','',4]
 ];
 
 export const ASSOC_WATCHLIST = [
-  ['TRREB REALTOR QUEST (Real Estate) &amp; Rx&amp;D/IMC (Pharma)','Both carry an existing testimonial &mdash; Urbanest Properties and Axis Diagnostics &mdash; but neither has a confirmed date inside this 90-day window (May TBD / 2026 TBD). Don&rsquo;t wait on the event: pursue the member-benefit listing or newsletter mention now, proof-in-hand.'],
+  ['Rx&amp;D/IMC (Pharma)','Carries an existing testimonial &mdash; Axis Diagnostics &mdash; but no confirmed date inside this sprint (2026 TBD). Don&rsquo;t wait on the event: pursue the member-benefit listing or newsletter mention now, proof-in-hand. (TRREB is now in the active sequence above.)'],
   ['CFLA Annual National Conference (fit 8, Guillermo Obregon testimonial)','Was Sep 14 &mdash; already passed as of this update. Approach the fleet leasing committee directly for a member-benefit bundle rather than waiting for next year&rsquo;s conference.'],
   ['NAFA 2026 Institute &amp; Expo (fit 9)','Was April &mdash; already passed for this year. Approach nationally via the Affiliate Partner program at nafa.org &mdash; NAFA restructured away from regional chapters in 2022, there is no &ldquo;NAFA Canada Chapter&rdquo; to join.'],
   ['&ldquo;FMAC&rdquo; (Fleet Management Association of Canada)','Could not be verified as a real organization in the source directory &mdash; do not book outreach against it. AFLA Canada Summit (afla.org) is the confirmed real substitute until FMAC is independently verified.']
@@ -92,21 +226,26 @@ export const GF_VERTICALS = [
 ];
 
 export const LENSES = [
-  ['B2B SaaS','MRR (net, not gross), logo count and names, churn, trial&rarr;paid rate, and CAC checked against the $850/fleet benchmarked ceiling &mdash; not the deck&rsquo;s superseded $1,450. Report grey-fleet, fuel-verification, and B2C as separate sub-lines, not blended.'],
-  ['Insurtech','Evidence the commission thesis is real pre-launch: broker conversations opened, behavior-pricing data being collected, named pilot interest from a carrier or MGA.'],
+  ['B2B SaaS','MRR (net, not gross), logo count and names, churn, trial&rarr;paid rate, and CAC against the $850/fleet target &mdash; a target, not an actual. Report grey-fleet, fuel-verification, and B2C as separate sub-lines, not blended, and sprint actuals separately from projections.'],
+  ['Not in this raise','Insurance is out of this raise (Sprint 01 plan). Don&rsquo;t pitch the broker-commission thesis or behaviour-pricing data to investors this round; an insurance broker is only one of the partnership asks.'],
   ['Transportation','Vertical penetration across the 5 fuel-verification segments plus the grey-fleet named verticals, driver/trip volume, Smartcar integration status, and the Alcoa fuel-fraud cross-check as a live proof point.']
 ];
 
 export const RULES = [
   'Charge from day one wherever possible &mdash; reserve free pilots for accounts with outsized distribution value only.',
-  'Do not chase 500+ vehicle enterprise accounts this window &mdash; a long cycle risks the whole 90 days for one logo.',
+  'Do not chase 500+ vehicle enterprise accounts this window &mdash; a long cycle risks the whole sprint for one logo.',
   'When a deal stalls on price, reframe to her own ROI number first &mdash; discounting before that trains buyers to wait.',
   '3+ active John users at one employer &rarr; skip cold outbound, go straight to a warm conversation.',
-  'Realized CAC above $850/fleet or $20/subscriber for two straight weeks &rarr; re-rank or cut that channel.',
-  'MRR pace or trial&rarr;paid conversion behind target for two straight weeks &rarr; escalate to partnerships, not more outbound volume.',
+  'Cost to win a customer: limit $850 per fleet and $20 per paying driver. Any channel above its limit two weeks in a row &rarr; cut or change it. Tag every deal with its source and hours spent.',
+  'Line behind two weeks running &rarr; name the cause first &mdash; volume, conversion, or deal timing. More volume rarely fixes a conversion problem.',
+  'Churn: flag the same week it appears. Net MRR is what counts.',
+  'Week 8 checkpoint (Nov 16): total MRR &ge; $2,000 &rarr; stay the course. Below $2,000 &rarr; move Prity from Apollo to partner follow-up and partner-sourced leads (not more cold email), and reset expectations: $8K by week 17 is now unlikely.',
+  'Pitch gate (week 13, Dec 21): start formal pitching only if total MRR &ge; $5,000 AND MRR grew in 3 of the last 4 weeks AND 20+ paying fleets with no customer over ~25% of MRR (Alcoa included). If not met: keep building relationships, send update #4, re-test weekly.',
+  'Runway (weekly): months left = cash &divide; monthly spend. Flag red if cash runs out before expected close + 3 months (base-case close weeks 26&ndash;30, Mar&ndash;Apr 2027). Fixes: angel top-up, OVIN / IRAP, full-price Alcoa expansion.',
+  'No ad spend of any kind until tracking is live. Neither ad test replaces partnerships.',
   'Never blend Confirmed and Estimated dollar figures into one point number in outward-facing copy &mdash; lead with the Confirmed floor, let fraud/leakage be the upside.',
   'Never apply grey-fleet mileage-correction language to a company-owned pitch, or fuel-savings language to a grey-fleet vehicle.',
-  'Any warm-intro message or dollar figure sent to an investor must carry the current $1.65M&ndash;$1.84M ask &mdash; a stale figure is what triggered the last full deck reconciliation pass.',
+  'Any warm-intro message or dollar figure sent to an investor must carry the current $1.6M USD ask ($12M post-money SAFE cap, range $10&ndash;14M) &mdash; a stale figure is what triggered the last full deck reconciliation pass.',
   'Data-partnership and association conversations are pipeline/credibility signals only &mdash; never count them toward the MRR number.',
   'Never present GPS/Smartcar tracking alone as &ldquo;the moat&rdquo; to an investor &mdash; it&rsquo;s commoditized; pair it with the compounding dataset, cross-team trust, or the flywheel. Never describe license/insurance verification or the named risk scores (Trip Trust, Safety, Trip Earning) in present tense &mdash; all roadmap, none built.',
   'Never pitch compliance-gating (auto-restricting claims to compliant vehicles/drivers) as differentiated IP &mdash; Prolius already ships it live. It&rsquo;s a real product gap worth closing, not a patentable one; lead any IP conversation with the Fuel Receipt Verification AI&rsquo;s triangulation logic instead.',
@@ -116,15 +255,15 @@ export const RULES = [
 
 export const TEAM = [
   ['V','Vikash','Product ownership, Retention &amp; Revenue, Investor workflow (sole owner)',null],
-  ['P','Prity','Customer Growth &amp; Success, Retention &amp; Revenue','No dedicated SDR &mdash; covers qualify, demo, and close solo'],
-  ['D','Divjot','Customer Growth &amp; Success (community/flywheel) + dedicated SDR &mdash; target-list build, persona-correct targeting',null],
+  ['P','Prity','Customer Growth &amp; Success, Retention &amp; Revenue; runs the Apollo list and targeted outreach (plan rank 4)','No dedicated SDR &mdash; also covers qualify, demo, and close solo'],
+  ['D','Divjot','Customer Growth &amp; Success (community/flywheel)',null],
   ['Di','Dilli','PMF &amp; Product, full-stack engineering','Solo on Axle/SambaSafety integration and mileage-model calibration'],
   ['K','Khalid','PMF &amp; Product, Flutter app',null],
   ['N','Nancy','PMF &amp; Product, trainee product manager',null]
 ];
 
 export const GAPS = [
-  ['Dedicated SDR &mdash; partially addressed','Divjot now owns target-list building with persona-correct buyer targeting; Prity still covers qualify + demo + close solo &mdash; the remaining bottleneck in the demo-led funnel.'],
+  ['Dedicated SDR','Prity builds the Apollo list and runs targeted outreach (plan rank 4) while also covering qualify + demo + close solo &mdash; the main bandwidth bottleneck. At the week-8 checkpoint she may move to partner follow-up.'],
   ['Dedicated retention / CS specialist','Vikash and Prity split retention &amp; revenue on top of product and growth duties &mdash; directly tied to the 4.0% churn vs. 2.0% expansion gap.'],
   ['Second backend / data engineer','Dilli is solo on both partner integrations and mileage-model calibration &mdash; these compete for the same bandwidth.'],
   ['Fundraising ops / associate','Vikash owns the entire investor workflow solo &mdash; ICP, outreach, pitches, data room, and close.'],
@@ -170,7 +309,8 @@ export const MOAT_ROWS = [
 export const FIELD_DEFS = [
   ['gfNewMRR','Grey fleet · New B2B MRR','money'],
   ['gfB2cMRR','Grey fleet · New B2C MRR','money'],
-  ['gfChurn','Grey fleet · Churned MRR','money'],
+  ['gfChurn','Grey fleet · Churned MRR — fleets','money'],
+  ['gfChurnB2c','Grey fleet · Churned MRR — drivers','money'],
   ['gfFleets','Grey fleet · New paying fleets','num'],
   ['gfSubs','Grey fleet · New paid B2C subs','num'],
   ['gfCacFleet','Grey fleet · CAC / fleet','money'],
@@ -205,7 +345,24 @@ export const FIELD_DEFS = [
   ['frCommitted','Fundraising · Capital committed','money'],
   ['frClosedCash','Fundraising · Capital closed/wired','money'],
   ['frFocus','Fundraising · Warm-intro path','text'],
-  ['frNotes','Fundraising · Notes','text']
+  ['frNotes','Fundraising · Notes','text'],
+  ['opCash','Ops · Cash in bank','money'],
+  ['opSpend','Ops · Monthly spend','money'],
+  ['opPayingFleets','Ops · Total paying fleets','num'],
+  ['opTopCustomer','Ops · Largest customer MRR','money'],
+  ['opDeals','Ops · New deals — source & hours','text'],
+  ['opSignups','Ops · Signups','num'],
+  ['opActiveTrip','Ops · Active trip users','num'],
+  ['opHeavyUsers','Ops · Heavy work-email users to call','num'],
+  ['opAuditSpend','Ops · Gated audit spend','money'],
+  ['opAuditLeads','Ops · Gated audit good-fit leads','num'],
+  ['opDriverSpend','Ops · Driver ads spend','money'],
+  ['opDriverUsers','Ops · New active work-email users','num'],
+  ['opManagerIntros','Ops · Manager intros','num'],
+  ['opOneThing','Ops · The one thing that matters most','text'],
+  ['opAct1','Ops · Action 1','text'], ['opOwn1','Ops · Action 1 owner','text'],
+  ['opAct2','Ops · Action 2','text'], ['opOwn2','Ops · Action 2 owner','text'],
+  ['opAct3','Ops · Action 3','text'], ['opOwn3','Ops · Action 3 owner','text']
 ];
 
 export const FORM_IDS = FIELD_DEFS.map(f => f[0]);
@@ -244,6 +401,138 @@ export const TEXT_FIELDS = new Set(FIELD_DEFS.filter(f => f[2]==='text' || f[2]=
    ok = green, watch = amber, risk = red, '' = neutral gray. */
 
 export const STATUS_SETS = {
+  /* GTM Implementation stages, per Vikash (Sep 26, 2026). Used only on
+     rows where the stages fit — see ROW_STATUS_OVERRIDES below.
+     "Not set" is only what an untouched row shows; it claims no stage.
+     Value ids are prefixed "stage-" so they can never collide with a
+     legacy id such as "outreach" (Outreach Sent) already in the log. */
+  gtm: [
+    ['','Not set',                            ''],
+    ['stage-icp','Stage 1: ICP definition',   'watch'],
+    ['stage-messaging','Stage 2: Messaging',  'watch'],
+    ['stage-outreach','Stage 3: Outreach',    'watch'],
+    ['stage-analytics','Stage 4: Analytics',  'watch'],
+    ['stage-outcome','Stage 5: Outcome',      'ok']
+  ],
+  /* Week review — Benchmark vs actual: did the week hit its plan target
+     and milestones? A Variance needs a why (the plan's rule: name the
+     cause first — volume, conversion, or deal timing). */
+  weekreview: [
+    ['','Not reviewed',   ''],
+    ['achieved','Achieved', 'ok'],
+    ['variance','Variance', 'risk']
+  ],
+
+  /* Plan channel 1 — Alcoa full-fleet expansion: 10 → ~40 (wk 5) → 100 (wk 8). */
+  alcoa: [
+    ['ten','10 trucks (current)',            ''],
+    ['ask-made','Expansion ask made',        'watch'],
+    ['forty','~40 trucks (step 1)',          'watch'],
+    ['hundred','100 trucks',                 'ok'],
+    ['escalate','Not at 100 by wk 8 — escalate','risk']
+  ],
+  /* Plan channel 5 — gated audit inbound test (paid ad rules). */
+  auditTest: [
+    ['not-started','Not started',               ''],
+    ['waiting-tracking','Waiting on tracking',  ''],
+    ['live','Live ($1,000–1,500/mo)',           'watch'],
+    ['hold','Day 45: hold',                     'watch'],
+    ['increase','Day 45: increase (< $150/lead)','ok'],
+    ['stopped','Stopped (> $250/lead)',         'risk']
+  ],
+  /* Plan channel 6 — driver ads test: referral reward first. */
+  driverTest: [
+    ['not-started','Not started',                    ''],
+    ['referral-live','Referral reward live ($0)',    'watch'],
+    ['ads-live','Ads live ($500–1,000/mo)',          'watch'],
+    ['increase','Day 30: increase',                  'ok'],
+    ['stopped','Stopped (> $40/user or no intros)',  'risk']
+  ],
+  /* Paid-ad tracking gate: no ad spend until this is live. */
+  tracking: [
+    ['not-live','Not live',                     'risk'],
+    ['site-live','Website events live',         'watch'],
+    ['all-live','Website + app events live',    'ok']
+  ],
+
+  /* ---- Row-specific sets. Each one was written for what its row actually
+     is, after reading the row. Where a meaning carries over (Not Started,
+     Active, Paused…) the stored id is reused, so saved history stays
+     readable. [value, label, pill class]. ---- */
+
+  /* Channel 1 — Pilot health & expansion (Alcoa, Satguru): accounts that
+     are already engaged or paying. Krish's list. */
+  pilot: [
+    ['not-started','Not Started',     ''],
+    ['in-progress','In Progress',     'watch'],
+    ['active','Active',               'ok'],
+    ['feedback-loop','Feedback Loop', 'watch'],
+    ['bought','Bought',               'ok'],
+    ['dead','Dead',                   'risk']
+  ],
+  /* Channel 5 — Demo-led funnel (Inbound → SDR Qual → AE Demo) with a
+     stated SLA (SDR ≤4h, demo ≤7 days): the question is whether it runs
+     and whether it holds the SLA. */
+  funnel: [
+    ['not-started','Not Started',       ''],
+    ['setting-up','Setting Up',         'watch'],
+    ['live-on-sla','Live — On SLA',     'ok'],
+    ['live-sla-missed','Live — SLA Missed','risk'],
+    ['on-hold','Paused',                '']
+  ],
+  /* Channel 7 — John community / Driver Championship flywheel: B2C
+     subscribers first, then warm employer leads into Sarah. */
+  flywheel: [
+    ['not-started','Not Started',             ''],
+    ['launched','Launched',                   'watch'],
+    ['subs-growing','Subscribers Growing',    'watch'],
+    ['leads-flowing','Employer Leads Flowing','ok'],
+    ['stalled','Stalled',                     'risk']
+  ],
+  /* Channel 8 — Content / SEO (audit guides, ROI calculators, case
+     studies): a production pipeline that compounds. */
+  content: [
+    ['not-started','Not Started',       ''],
+    ['planned','Planned',               ''],
+    ['in-production','In Production',   'watch'],
+    ['published','Published',           'watch'],
+    ['driving-inbound','Driving Inbound','ok'],
+    ['on-hold','Paused',                '']
+  ],
+  /* Channel 10 — Industry events & associations: a founder-led play
+     capped at a weekly floor of one partner/association conversation. */
+  cadence: [
+    ['not-started','Not Started',         ''],
+    ['on-track','On Track (1+/week)',     'ok'],
+    ['below-floor','Below Weekly Floor',  'risk'],
+    ['on-hold','Paused',                  '']
+  ],
+  /* Fuel-verification vertical 5 — Utilities / Telecom: "Phase 2 test
+     only — validate before resourcing". */
+  phase2: [
+    ['not-resourced','Not Resourced',   ''],
+    ['validating','Validating',         'watch'],
+    ['ready','Ready for Phase 2',       'ok'],
+    ['dropped','Dropped',               'risk']
+  ],
+  /* IP row 2 — confirm IP-assignment & confidentiality agreements are
+     signed by everyone with access. A sign-off, not a filing. */
+  signoff: [
+    ['not-started','Not Started',           ''],
+    ['collecting','Collecting Signatures',  'watch'],
+    ['all-signed','All Signed',             'ok'],
+    ['gap-found','Gap Found',               'risk']
+  ],
+  /* IP row 4 — one scoping call with a patent attorney: "this sprint's
+     job is the decision, not the filing". */
+  scoping: [
+    ['not-started','Not Started',           ''],
+    ['call-booked','Call Booked',           'watch'],
+    ['call-done','Call Done — Deciding',    'watch'],
+    ['decided-file','Decision: File Provisional','ok'],
+    ['decided-no','Decision: Don’t File', '']
+  ],
+
   /* IP & legal — US legal-ops workflow, for rows that are ACTIONS. */
   ip: [
     ['not-started','Not Started',   ''],
@@ -262,6 +551,9 @@ export const STATUS_SETS = {
     ['revisit','Needs Revisit',     'watch'],
     ['reopened','Reopened',         'risk']
   ],
+  /* `partner` below is no longer offered on any row (those three rows
+     now use `gtm`), but stays so their earlier statuses and change-log
+     entries still read in their original words. Do not delete. */
   /* Associations & events — access-ask BD pipeline, with a post-event state
      so a conference that has happened stops reading as still upcoming. */
   assoc: [
@@ -270,6 +562,7 @@ export const STATUS_SETS = {
     ['in-discussion','Engaged',     'watch'],
     ['confirmed','Committed',       'ok'],
     ['attended','Attended',         'ok'],
+    ['followed-up','Follow-up Done','ok'],
     ['not-proceeding','Passed',     'risk'],
     ['deferred','On Hold',          '']
   ],
@@ -307,35 +600,67 @@ export const STATUS_SETS = {
   ]
 };
 
-/* Per-row overrides.
+/* Per-row status sets.
 
-   Most rows use their table's status set. These do not, because their own
-   content settles the question:
+   Every tracked row was read and given the statuses that describe what it
+   actually is. The table's set (TRACKER_GROUPS) covers rows not listed here.
 
-   - IP rows 5-8 are conclusions ("not patentable", "blocked by prior art",
-     "do not file", "excluded"), not tasks.
-   - Channel 11 is "Paid acquisition", whose own rule is "do not spend in
-     this window" — an action pipeline would invite contradicting it.
+   Channels
+     1  Pilot health & expansion ...... pilot     (Not Started → Bought / Dead)
+     2  Fuel-card partnerships ........ gtm       (5 GTM stages)
+     3  Insurance-broker partnerships . gtm
+     4  Fleet leasing & rental ........ gtm
+     5  Demo-led funnel ............... funnel    (inbound, SLA-driven)
+     6  Outbound SDR .................. gtm
+     7  John community flywheel ....... flywheel
+     8  Content / SEO ................. content
+     9  LinkedIn ABM .................. gtm
+     10 Industry events & associations  cadence   (weekly floor)
+     11 Paid acquisition .............. decision  ("do not spend")
+   Verticals
+     Grey-fleet 1-5, fuel-verification 1-4 ... gtm
+     Fuel-verification 5 Utilities/Telecom .... phase2 (not resourced)
+   Associations & events 1-5 ................ assoc (event lifecycle)
+   IP / moat
+     1 Trademark, 3 Copyright ....... ip       (filing → registered)
+     2 IP-assignment agreements ..... signoff
+     4 Patent scoping call .......... scoping  (a decision, not a filing)
+     5-8 Conclusions ................ decision
 
    The DEFAULTS below are only set where the plan text already states the
    state in words. Nothing here asserts a fact the plan does not. */
 export const ROW_STATUS_OVERRIDES = {
-  // Conclusions, not tasks — see the `decision` set above.
-  'ip:5': 'decision', 'ip:6': 'decision', 'ip:7': 'decision', 'ip:8': 'decision',
-  'chan:11': 'decision',
-  // Named commercial-partner motions: the ask is referral / revenue-share,
-  // so these track to a signed agreement, not a channel lifecycle.
-  'chan:2': 'partner', 'chan:3': 'partner', 'chan:4': 'partner'
+  // Sprint 01 plan channel priority (rows plan:1..6).
+  'plan:1':'alcoa', 'plan:2':'gtm', 'plan:3':'gtm', 'plan:4':'gtm',
+  'plan:5':'auditTest', 'plan:6':'driverTest',
+  // Retired 11-row channel stack — kept so its history still reads correctly.
+  'chan:1':'pilot',
+  'chan:2':'gtm', 'chan:3':'gtm', 'chan:4':'gtm',
+  'chan:5':'funnel',
+  'chan:6':'gtm',
+  'chan:7':'flywheel',
+  'chan:8':'content',
+  'chan:9':'gtm',
+  'chan:10':'cadence',
+  'chan:11':'decision',
+  'fvvert:5':'phase2',
+  'ip:2':'signoff',
+  'ip:4':'scoping',
+  'ip:5':'decision', 'ip:6':'decision', 'ip:7':'decision', 'ip:8':'decision'
 };
 
 export const ROW_STATUS_DEFAULTS = {
-  // "Do not spend in this window" / "not a Fuelshine product" — stated.
+  // "10 Alcoa vehicles until more are confirmed" — stated in the plan.
+  'plan:1':'ten',
+  'gate:tracking':'not-live',
+  // "not patentable" / "blocked" / "defer" / "excluded" — stated in the rows.
   'ip:5':'settled', 'ip:6':'settled', 'ip:7':'settled', 'ip:8':'settled',
+  // "Do not spend in this window" — stated.
   'chan:11':'settled',
   // "Already-paying or already-engaged accounts" — stated in the row.
   'chan:1':'active',
   // "Phase 2 test only — not resourced this sprint" — stated in the row.
-  'fvvert:5':'on-hold'
+  'fvvert:5':'not-resourced'
 };
 
 /* Which status set each tracked table uses, and the label shown in the change log. */
@@ -343,9 +668,58 @@ export const TRACKER_GROUPS = {
   ip:      { set:'ip',       label:'IP action' },
   assoc:   { set:'assoc',    label:'Association / event' },
   chan:    { set:'channel',  label:'Channel' },
-  fvvert:  { set:'vertical', label:'Fuel-verification vertical' },
-  gfvert:  { set:'vertical', label:'Grey-fleet vertical' }
+  fvvert:  { set:'gtm',      label:'Fuel-verification vertical' },
+  gfvert:  { set:'gtm',      label:'Grey-fleet vertical' },
+  wk:      { set:'weekreview', label:'Week review' },
+  plan:    { set:'gtm',      label:'Channel' },
+  gate:    { set:'tracking', label:'Paid-ad tracking gate' }
 };
+
+/* What each row used in the previous live version (before per-row sets),
+   so a status saved back then, and its history entries, still read in
+   their original words instead of being silently remapped. */
+const ORIGINAL_ROW_SETS = {
+  'chan:2':'partner', 'chan:3':'partner', 'chan:4':'partner', 'chan:11':'decision',
+  'ip:5':'decision', 'ip:6':'decision', 'ip:7':'decision', 'ip:8':'decision'
+};
+const ORIGINAL_GROUP_SETS = { ip:'ip', assoc:'assoc', chan:'channel', fvvert:'vertical', gfvert:'vertical' };
+const ORIGINAL_DEFAULTS = {
+  'ip:5':'settled', 'ip:6':'settled', 'ip:7':'settled', 'ip:8':'settled',
+  'chan:11':'settled', 'chan:1':'active', 'fvvert:5':'on-hold'
+};
+
+/** The set a row used in the previous version, if different from today's. */
+export function legacySetForRow(key, group){
+  const orig = ORIGINAL_ROW_SETS[key] || ORIGINAL_GROUP_SETS[group] || null;
+  return orig && orig !== setForRow(key, group) ? orig : null;
+}
+/** What an untouched row showed under its previous set. */
+export function legacyDefaultForRow(key, setName){
+  return ORIGINAL_DEFAULTS[key] || (STATUS_SETS[setName] || [['']])[0][0];
+}
+/** Pill colour for a value that isn't in the row's current set. */
+export function foreignClass(key, group, value){
+  const legacy = legacySetForRow(key, group);
+  if (legacy && inSet(legacy, value)) return statusClass(legacy, value);
+  for (const name of Object.keys(STATUS_SETS)){
+    if (inSet(name, value)) return statusClass(name, value);
+  }
+  return '';
+}
+/** True if a value belongs to the given set. */
+export function inSet(setName, value){
+  return (STATUS_SETS[setName]||[]).some(s => s[0] === value);
+}
+/** Label for a value that isn't in the row's current set: its previous set
+    first, then any set that knows it, else the raw value. */
+export function foreignLabel(key, group, value){
+  const legacy = legacySetForRow(key, group);
+  if (legacy && inSet(legacy, value)) return statusLabel(legacy, value);
+  for (const name of Object.keys(STATUS_SETS)){
+    if (inSet(name, value)) return statusLabel(name, value);
+  }
+  return value;
+}
 
 /** The status set a given row uses — its override, else its table's set. */
 export function setForRow(key, group){

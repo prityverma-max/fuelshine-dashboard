@@ -1,14 +1,39 @@
-# Fuelshine 90-Day Sprint Dashboard
+# Fuelshine Sprint 01 Dashboard
 
 Weekly tracker for the two acquisition motions and the raise, with a full
 change history.
 
 - **Saves persist.** Everything entered is written to a database, not to the page.
 - **Every save is versioned.** Who saved it, when, and exactly which fields moved.
-- **Status tracking** on 34 decision rows (IP actions, associations, channels,
-  verticals) — auto-saved and logged into the same timeline.
+- **Status tracking** on 34 decision rows. Outreach-led rows in *GTM
+  Implementation* (partner motions, outbound, community, LinkedIn ABM and the
+  active verticals) move through five stages — ICP definition → Messaging →
+  Outreach → Analytics → Outcome; every other row keeps its own status set.
+  Each row shows who last updated it and when — auto-saved and logged into the same timeline.
 - **Any version can be restored** — and restoring writes a *new* version rather
   than erasing anything.
+
+
+> **Moving to the Sprint 01 timeline (Sep 30, 2026).** The dashboard now runs
+> 17 weeks, Mon Sep 28 2026 → Sun Jan 24 2027, with week-by-week targets from
+> the Sprint 01 Weekly Plan. On an existing install, run
+> `migrate_sprint01.sql` once in Supabase → SQL Editor, then push this code
+> straight away (no weekly saves in between). It renumbers saved weeks (old
+> week 3 = new week 1); anything saved for Sep 14 and Sep 21 becomes weeks −1
+> and 0 and counts as MRR already running when Sprint 01 starts. A second run
+> refuses and changes nothing. Until it has run, the dashboard shows a red
+> banner and pauses weekly saves. New installs just run `schema.sql`.
+
+
+> **Plan is the source of truth (Oct 1, 2026).** Channel priority, paid-ad
+> rules, cost limits, the week-8 checkpoint, the pitch gate, runway and the
+> Monday 7-step check all follow the Sprint 01 Weekly Plan. Runway, pitch-gate
+> inputs, PostHog signals, ad-test numbers and the weekly top-3 actions are
+> entered in the **Ops & runway** tab. No database change beyond
+> `migrate_sprint01.sql` is needed: new fields live inside each week's saved
+> data, and the new status rows use new keys (`plan:1`–`plan:6`,
+> `gate:tracking`). The retired 11-row channel stack's statuses stay in the
+> change history.
 
 ---
 
@@ -20,7 +45,7 @@ On any other host (Wix, Vercel, a local file) the `claude` object does not exist
 so that line threw and the save button never even got wired up. There was no
 database behind the page at all.
 
-This version replaces that one line with a real storage layer (`assets/store.js`).
+This version replaces that one line with a real storage layer (`store.js`).
 
 ---
 
@@ -44,8 +69,9 @@ line entirely:
    - Local path: pick a folder
    - Leave everything else default → **Create Repository**
 3. Open that newly created folder in Finder/Explorer, and copy the **contents**
-   of this project into it — `index.html`, the `assets` folder, the `supabase`
-   folder, `vercel.json`, `README.md`, `.gitignore`.
+   of this project into it — every file in the zip (`index.html`, the `.js` and
+   `.css` files, `logo.png`, the two `.sql` files, `vercel.json`, `README.md`,
+   `.gitignore`).
    Make sure `index.html` sits at the **top level**, not inside a subfolder.
 4. Back in GitHub Desktop you'll see all the files listed as changes. Type a
    summary like `Initial dashboard` → **Commit to main**.
@@ -104,7 +130,7 @@ device only. It works, but nothing is shared, and an amber
 1. [supabase.com](https://supabase.com) → **New project**. Free, no card.
 2. Name it, set a strong database password, pick the region closest to the team.
 3. When it finishes provisioning: **SQL Editor → New query**.
-4. Paste the whole of [`supabase/schema.sql`](supabase/schema.sql) → **Run**.
+4. Paste the whole of [`schema.sql`](schema.sql) → **Run**.
    You should see *"Success. No rows returned."*
 5. **Project Settings → API**, copy two values:
    - **Project URL** — `https://abcdefgh.supabase.co`
@@ -114,7 +140,7 @@ device only. It works, but nothing is shared, and an amber
 > client-side code and row-level security limits what it can touch.
 > `service_role` bypasses all of it and must never be committed.
 
-6. Open `assets/config.js` and fill them in:
+6. Open `config.js` and fill them in:
 
 ```js
 export const SUPABASE_URL = 'https://abcdefgh.supabase.co';
@@ -165,8 +191,8 @@ backup before any risky change.
 
 ## Editing the content
 
-All plan copy — phases, channel stack, verticals, rules, team, moat table,
-objections — lives in **`assets/data.js`** as plain arrays. Edit, commit, push.
+All plan copy — phases, GTM Implementation (channels), verticals, rules, team, moat table,
+objections — lives in **`data.js`** as plain arrays. Edit, commit, push.
 You never need to touch the HTML or the app logic.
 
 To add a *tracked field*, add an entry to `FIELD_DEFS` in `data.js` and a
@@ -183,14 +209,14 @@ its history.
 
 ```
 index.html              markup only
-assets/
-  config.js             ← your two Supabase values + editor names
-  data.js               all plan content + field definitions + status sets
-  store.js              persistence, diffing, versioning, restore
-  app.js                rendering and wiring
-  styles.css            brand palette + type scale
-  logo.png              Fuelshine mark (header + favicon)
-supabase/schema.sql     run once in the Supabase SQL editor
+config.js               ← your two Supabase values + editor names
+data.js                 all plan content, Sprint 01 weekly targets, status sets
+store.js                persistence, diffing, versioning, restore
+app.js                  rendering and wiring
+styles.css              brand palette + type scale
+logo.png                Fuelshine mark (header + favicon)
+schema.sql              new install: run once in the Supabase SQL editor
+migrate_sprint01.sql    existing install: run once to move to Sprint 01 weeks
 vercel.json             static-hosting config
 ```
 

@@ -27,6 +27,34 @@ const LS_LOG      = 'fuelshine.changelog.v1';
 
 export const MODE = (SUPABASE_URL && SUPABASE_ANON_KEY) ? 'supabase' : 'local';
 
+/* Browser-only mode: move saved weeks onto the Sprint 01 timeline once
+   (old week N → week N-2; old weeks 1-2 become -1 and 0 = before Sprint 01),
+   mirroring migrate_sprint01.sql. Guarded by a flag so it runs one time. */
+const LS_CALENDAR = 'fuelshine.calendar';
+(function migrateLocalCalendar(){
+  try{
+    if (MODE !== 'local' || localStorage.getItem(LS_CALENDAR) === 'sprint01') return;
+    const weeks = JSON.parse(localStorage.getItem('fuelshine.weeks.v1') || '{}');
+    const moved = {};
+    Object.keys(weeks).forEach(k=>{
+      const n = Number(k) - 2;
+      moved[n] = Object.assign({}, weeks[k], { weekNum:n });
+    });
+    localStorage.setItem('fuelshine.weeks.v1', JSON.stringify(moved));
+    const log = JSON.parse(localStorage.getItem('fuelshine.changelog.v1') || '[]');
+    log.forEach(r=>{
+      if (r.scope === 'week' && /^\d+$/.test(String(r.ref_key))){
+        const n = Number(r.ref_key) - 2;
+        r.ref_key = String(n);
+        r.ref_label = n === -1 ? 'Before Sprint 01 (week of Sep 14)'
+                    : n === 0  ? 'Before Sprint 01 (week of Sep 21)' : 'Week ' + n;
+      }
+    });
+    localStorage.setItem('fuelshine.changelog.v1', JSON.stringify(log));
+    localStorage.setItem(LS_CALENDAR, 'sprint01');
+  }catch(e){ /* storage blocked: nothing saved to migrate */ }
+})();
+
 /* ---------- diffing ---------- */
 
 function normalize(v, id){
@@ -340,10 +368,20 @@ export const Store = {
     };
   },
 
+  /** True when the database is on the Sprint 01 timeline (migration applied). */
+  async sprintReady(){
+    if (MODE !== 'supabase') return true;
+    try{
+      const rows = await sbFetch('schema_migrations?select=name&name=eq.sprint01_timeline',
+        { headers: sbHeaders() });
+      return Array.isArray(rows) && rows.length > 0;
+    }catch(e){ return false; }
+  },
+
   async healthCheck(){
     if (MODE !== 'supabase'){
       return 'Not connected to a database — data is saved in this browser only, on this device. ' +
-             'Add your Supabase URL and anon key in assets/config.js to share it with the team.';
+             'Add your Supabase URL and anon key in config.js to share it with the team.';
     }
     try { await sbFetch('weeks?select=week_num&limit=1', { headers: sbHeaders() }); return null; }
     catch (e){ return 'Cannot reach the database: ' + e.message; }

@@ -1,11 +1,11 @@
 -- ===================================================================
--- Fuelshine 90-Day Sprint — database schema
+-- Fuelshine Sprint 01 (17 weeks, Sep 28 2026 → Jan 24 2027) — database schema
 -- Paste this whole file into Supabase → SQL Editor → Run. Once.
 -- ===================================================================
 
 -- Current value of each week. One row per week, overwritten on save.
 create table if not exists public.weeks (
-  week_num    int primary key check (week_num between 1 and 13),
+  week_num    int primary key check (week_num between -1 and 17),  -- -1, 0 = before Sprint 01 (opening MRR)
   data        jsonb not null default '{}'::jsonb,
   updated_at  timestamptz not null default now(),
   updated_by  text
@@ -100,3 +100,18 @@ create policy log_write on public.change_log for insert with check (true);
 -- purging will then fail, and the log can only ever grow.
 create policy log_archive on public.change_log for update using (true) with check (true);
 create policy log_purge   on public.change_log for delete using (archived = true);
+
+-- -------------------------------------------------------------------
+-- Migration marker. The dashboard reads this to confirm the database is
+-- on the Sprint 01 timeline (17 weeks from Mon Sep 28 2026) before it
+-- allows weekly saves. Fresh installs start on that timeline.
+-- -------------------------------------------------------------------
+create table if not exists public.schema_migrations (
+  name       text primary key,
+  applied_at timestamptz not null default now()
+);
+alter table public.schema_migrations enable row level security;
+drop policy if exists migrations_read on public.schema_migrations;
+create policy migrations_read on public.schema_migrations for select using (true);
+insert into public.schema_migrations(name) values ('sprint01_timeline')
+  on conflict (name) do nothing;

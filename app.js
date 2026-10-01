@@ -1,14 +1,18 @@
 /* ------------------------------------------------------------------
    app.js — rendering + wiring.
-   All persistence goes through Store (assets/store.js).
+   All persistence goes through Store (store.js).
    ------------------------------------------------------------------ */
 
 import {
-  START, WEEKS, FLOOR, STRETCH, CAC_FLEET_CEIL, CAC_SUB_CEIL, FR_FLOOR,
+  START, WEEKS, SPRINT_DAYS, FLOOR, STRETCH, CAC_FLEET_CEIL, CAC_SUB_CEIL, FR_FLOOR,
+  PLAN_WEEKS, PLAN_SOURCE, OPENING_MRR, planFor, planStatus,
+  PLAN_LINES, PLAN_PRICE, PLAN_EXPECTATION, CLOSE_WEEKS, RUNWAY_NEEDED_UNTIL, RUNWAY_FIXES,
+  AD_RULES, INVESTOR_CONSISTENCY, MONDAY_CHECK, SAFE_CAP,
   PHASES, CHANNELS, ASSOC_PRIORITY, ASSOC_WATCHLIST, VERTICALS, GF_VERTICALS,
   LENSES, RULES, TEAM, GAPS, LEADLINES, DISCOVERY, OBJECTIONS, MOAT_ROWS,
   FORM_IDS, FIELD_KINDS, TEXT_FIELDS,
-  STATUS_SETS, TRACKER_GROUPS, statusLabel, statusClass, setForRow, defaultForRow
+  STATUS_SETS, TRACKER_GROUPS, statusLabel, statusClass, setForRow, defaultForRow,
+  legacySetForRow, legacyDefaultForRow, inSet, foreignLabel, foreignClass
 } from './data.js';
 import { EDITORS } from './config.js';
 import { Store } from './store.js';
@@ -27,17 +31,25 @@ function fmtValue(id, v){
   return String(Number(v)||0);
 }
 
+/* The sprint runs on Toronto business time: a new day/week starts at
+   midnight in Toronto, for everyone, wherever they open the page. */
+const BIZ_TZ = 'America/Toronto';
+function bizToday(){          // 'YYYY-MM-DD' in Toronto
+  return new Intl.DateTimeFormat('en-CA',{timeZone:BIZ_TZ, year:'numeric', month:'2-digit', day:'2-digit'}).format(new Date());
+}
+const dayMs = 86400000;
+function daysBetween(a, b){   // whole days from ISO date a to ISO date b
+  return Math.round((Date.parse(b+'T00:00:00Z') - Date.parse(a+'T00:00:00Z'))/dayMs);
+}
+function addDays(iso, n){ return new Date(Date.parse(iso+'T00:00:00Z') + n*dayMs).toISOString().slice(0,10); }
+const START_ISO = START.toISOString().slice(0,10);
+
 function todayInfo(){
-  const now = new Date();
-  const dayNum = Math.floor((now - START)/86400000) + 1;
+  const t = bizToday();
+  const dayNum = daysBetween(START_ISO, t) + 1;
   let currentWeek = 0;
-  for (const w of WEEKS){
-    const mon = new Date(w.monday+'T00:00:00Z');
-    const sun = new Date(mon.getTime() + 6*86400000);
-    if (now >= mon && now <= sun){ currentWeek = w.n; break; }
-    if (now > sun) currentWeek = w.n;
-  }
-  return { dayNum: Math.max(1, Math.min(91, dayNum)), currentWeek };
+  for (const w of WEEKS){ if (w.monday <= t) currentWeek = w.n; }
+  return { today:t, dayNum: Math.max(1, Math.min(SPRINT_DAYS, dayNum)), currentWeek };
 }
 
 /* ---------- static shell ---------- */
@@ -45,14 +57,9 @@ function todayInfo(){
 function renderStaticShell(){
   document.getElementById('dayNum').textContent = todayInfo().dayNum;
 
-  const today = new Date();
-  const ranges = [
-    [new Date('2026-09-10'), new Date('2026-10-09')],
-    [new Date('2026-10-10'), new Date('2026-11-08')],
-    [new Date('2026-11-09'), new Date('2026-12-08')]
-  ];
+  const today = bizToday();
   document.getElementById('phaseGrid').innerHTML = PHASES.map((p,i)=>{
-    const isCurrent = today >= ranges[i][0] && today <= ranges[i][1];
+    const isCurrent = today >= p.start && today <= p.end;
     return `<div class="card phase${isCurrent?' current':''}">
       <div class="tag">${p.tag}${isCurrent?' &middot; NOW':''}</div>
       <div class="dates">${p.dates}</div>
@@ -65,6 +72,18 @@ function renderStaticShell(){
   document.getElementById('assocWatchlistBody').innerHTML = ASSOC_WATCHLIST.map(w=>
     `<tr><td style="white-space:normal; min-width:220px;">${w[0]}</td><td style="white-space:normal; min-width:300px;">${w[1]}</td></tr>`
   ).join('');
+
+  document.getElementById('consistencyLine').textContent = INVESTOR_CONSISTENCY;
+  document.getElementById('mondaySteps').innerHTML = MONDAY_CHECK.map(t=>`<li>${esc(t)}</li>`).join('');
+  document.getElementById('planLines').innerHTML = `<table class="planlines"><thead><tr><th>Line</th><th class="num">Week-17 MRR</th><th>Made up of</th></tr></thead><tbody>` +
+    PLAN_LINES.map((l,i)=>`<tr class="${i===PLAN_LINES.length-1?'tot':''}"><td>${esc(l[0])}</td><td class="num"><b>${esc(l[1])}</b></td><td>${esc(l[2])}</td></tr>`).join('') + `</tbody></table>`;
+  document.getElementById('planPrice').textContent = PLAN_PRICE;
+  document.getElementById('planExpectation').textContent = PLAN_EXPECTATION;
+  document.getElementById('channelExpectation').textContent = PLAN_EXPECTATION;
+  document.getElementById('adGateText').innerHTML = `<b>Tracking gate.</b> ${esc(AD_RULES.gate)}`;
+  document.getElementById('adRulesBody').innerHTML = AD_RULES.rows.map(r=>
+    `<tr><th scope="row">${esc(r[0])}</th><td>${esc(r[1])}</td><td>${esc(r[2])}</td></tr>`).join('') +
+    `<tr class="adlive"><th scope="row">This sprint so far</th><td id="adAuditLive">—</td><td id="adDriverLive">—</td></tr>`;
 
   document.getElementById('lensGrid').innerHTML = LENSES.map(l=>
     `<div class="card navy"><h3>${l[0]}</h3><div style="font-size:var(--fs-sm);">${l[1]}</div></div>`
@@ -95,7 +114,7 @@ function renderStaticShell(){
   const cw = todayInfo().currentWeek || 1;
   const weekOpts = WEEKS.map(w=>{
     const d = new Date(w.monday+'T00:00:00Z');
-    const label = d.toLocaleDateString('en-US',{month:'short',day:'numeric'});
+    const label = d.toLocaleDateString('en-US',{month:'short',day:'numeric',timeZone:'UTC'});
     return `<option value="${w.n}" ${w.n===cw?'selected':''}>Week ${w.n} &mdash; ${label}</option>`;
   }).join('');
   document.getElementById('weekSelect').innerHTML = weekOpts;
@@ -104,7 +123,7 @@ function renderStaticShell(){
     '<option value="">Everything</option>' +
     '<option value="scope:week">Weekly numbers only</option>' +
     '<option value="scope:tracker">Status changes only</option>' +
-    WEEKS.map(w=>`<option value="week:${w.n}">Week ${w.n} only</option>`).join('');
+    WEEKS.map(w=>`<option value="week:${w.n}">Week ${w.n} numbers only</option>`).join('');
 
   /* A browser may remember a name that has since been removed from EDITORS.
      Fall back rather than leaving the dropdown showing nothing. */
@@ -136,38 +155,70 @@ function trim(text, max){
   return (space > max * 0.6 ? cut.slice(0, space) : cut).replace(/[\s,;:—-]+$/,'') + '…';
 }
 
+/** "Last updated by Prity · Sep 30, 4:05 PM", or a plain not-yet line. */
+function lastUpdatedText(by, at){
+  if (!by) return 'Not updated yet';
+  const when = at ? new Date(at).toLocaleString('en-US',
+    {month:'short', day:'numeric', hour:'numeric', minute:'2-digit'}) : '';
+  return `Last updated by <b>${esc(by)}</b>${when ? ' · ' + when : ''}`;
+}
+
+/** Grow a why box to fit its text, so the full reason is always visible. */
+function fitWhy(el){
+  el.style.height = 'auto';
+  el.style.height = Math.max(44, el.scrollHeight + 2) + 'px';
+}
+document.addEventListener('input', ev=>{
+  if (ev.target.classList && ev.target.classList.contains('whynote')) fitWhy(ev.target);
+});
+
 /** The <td> holding a status control + note for one tracked row. */
 function statusCell(group, key, itemLabel, trackers){
   // A row may override its table's status set — see ROW_STATUS_OVERRIDES.
   const setName = setForRow(key, group);
   const cur = trackers[key] || { status:'', note:'' };
   const value = cur.status || defaultForRow(key, setName);
-  const opts = STATUS_SETS[setName].map(([v,l]) =>
+  let opts = STATUS_SETS[setName].map(([v,l]) =>
     `<option value="${v}" ${v===value?'selected':''}>${l}</option>`).join('');
-  const meta = cur.updatedBy
-    ? `<div class="statusmeta">${esc(cur.updatedBy)} · ${new Date(cur.updatedAt).toLocaleDateString('en-US',{month:'short',day:'numeric'})}</div>`
-    : '';
+  // A status saved under a row's earlier set is shown as it was, never
+  // silently remapped, until someone picks a current one.
+  if (!inSet(setName, value)){
+    opts = `<option value="${esc(value)}" selected>${esc(foreignLabel(key, group, value))} (old status)</option>` + opts;
+  }
+  const meta = `<div class="statusmeta" data-meta="${esc(key)}">${lastUpdatedText(cur.updatedBy, cur.updatedAt)}</div>`;
   return `<td class="statuscell">
-    <span class="statuschip ${statusClass(setName, value)}">
+    <span class="statuschip ${inSet(setName, value) ? statusClass(setName, value) : foreignClass(key, group, value)}">
       <span class="sdot"></span>
-      <select class="statussel" aria-label="Status"
+      <select class="statussel" aria-label="Status — ${esc(itemLabel)}"
               data-key="${esc(key)}" data-group="${group}" data-label="${esc(itemLabel)}">${opts}</select>
     </span>
-    <input class="statusnote" type="text" placeholder="Add a note" value="${esc(cur.note||'')}"
-           aria-label="Note" data-key="${esc(key)}" data-group="${group}" data-label="${esc(itemLabel)}">
+    ${group==='wk'
+      ? `<textarea class="statusnote whynote${value==='variance' && !cur.note ? ' needwhy' : ''}" rows="2"
+           placeholder="${value==='variance' ? 'Why? Volume, conversion or deal timing — and the fix' : 'Add a note'}"
+           aria-label="Why / note — ${esc(itemLabel)}" data-key="${esc(key)}" data-group="${group}" data-label="${esc(itemLabel)}">${esc(cur.note||'')}</textarea><span class="whyhint" role="status">Add the why for this variance</span>`
+      : `<input class="statusnote" type="text" placeholder="Add a note" value="${esc(cur.note||'')}"
+           aria-label="Note — ${esc(itemLabel)}" data-key="${esc(key)}" data-group="${group}" data-label="${esc(itemLabel)}">`}
     ${meta}
     <span class="flash" data-flash="${esc(key)}"></span>
   </td>`;
 }
 
-function renderTrackedTables(trackers){
+function renderTrackedTables(loaded){
+  // Save any note being typed before the tables are rebuilt (blur commits),
+  // then keep in-flight edits over what was just loaded, so a reload that
+  // races a save never shows stale text.
+  const active = document.activeElement;
+  if (active && active.classList && active.classList.contains('statusnote')) active.blur();
+  trackerCache = Object.assign({}, loaded || {}, Object.fromEntries(pendingTrackers));
+  const trackers = trackerCache;
+  if (seriesCache){ renderVariance(seriesCache); renderGates(seriesCache); renderAdLive(seriesCache); }
   document.getElementById('channelBody').innerHTML = CHANNELS.map((c,i)=>{
-    const key = 'chan:' + (i+1);
+    const key = 'plan:' + (i+1);
     return `<tr><td><span class="rank">${i+1}</span></td>
-      <td style="white-space:normal; min-width:240px;">${c[0]}</td>
-      ${statusCell('chan', key, 'Channel — ' + trim(c[0], 52), trackers)}
-      <td>${c[1]}</td><td>${c[2]}</td>
-      <td style="white-space:normal; min-width:240px;">${c[3]}</td></tr>`;
+      <td style="white-space:normal; min-width:150px;">${c[0]}</td>
+      ${statusCell('plan', key, 'Channel — ' + trim(c[0], 52), trackers)}
+      <td>${c[1]}</td><td style="white-space:normal; min-width:120px; max-width:170px;">${c[2]}</td>
+      <td style="white-space:normal; min-width:260px;">${c[3]}</td></tr>`;
   }).join('');
 
   document.getElementById('verticalBody').innerHTML = VERTICALS.map(v=>{
@@ -187,15 +238,18 @@ function renderTrackedTables(trackers){
   }).join('');
 
   document.getElementById('assocPriorityBody').innerHTML = ASSOC_PRIORITY.map(a=>{
-    const key = 'assoc:' + a[0];
+    const key = 'assoc:' + a[a.length-1];   // stable id — display order follows the plan
     return `<tr><td><span class="rank">${a[0]}</span></td>
       <td style="white-space:normal; min-width:170px;">${a[1]}</td>
       ${statusCell('assoc', key, plainText(a[1]), trackers)}
       <td style="white-space:normal; min-width:140px;">${a[2]}</td>
-      <td style="white-space:normal; min-width:190px;">${a[3]}</td><td>${a[4]}</td>
+      <td style="white-space:normal; min-width:170px;">${a[3]}</td><td style="white-space:normal; min-width:110px;">${a[4]}</td>
       <td style="white-space:normal; min-width:160px;">${a[5]}</td>
       <td style="white-space:normal; min-width:190px;">${a[6]}</td></tr>`;
   }).join('');
+
+  const gate = document.getElementById('adGateStatus');
+  if (gate) gate.innerHTML = `<table class="gatecell"><tr>${statusCell('gate', 'gate:tracking', 'Paid-ad tracking gate', trackers)}</tr></table>`;
 
   document.getElementById('moatBody').innerHTML = MOAT_ROWS.map(r=>{
     const key = 'ip:' + r[0];
@@ -210,25 +264,49 @@ function renderTrackedTables(trackers){
 
 /* ---------- derived series ---------- */
 
+/* MRR already running when Sprint 01 starts: weeks saved before Sep 28
+   (stored as week -1 and 0) plus any OPENING_MRR set in data.js. Kept in
+   one place so every total — headline, chart, pace, variance — agrees. */
+let openingCache = { total:0, fromWeeks:0 };
 function seriesFrom(weeksData){
   const byNum = {}; weeksData.forEach(w=>{ byNum[w.weekNum]=w; });
-  let running=0, gfRunning=0, fvRunning=0, frRunning=0;
-  let cumTouches=0, cumResponses=0, cumMeetHeld=0, cumDD=0, cumTermSheets=0, cumCloses=0;
+  const pre = weeksData.filter(w => Number(w.weekNum) <= 0);
+  const sum = k => pre.reduce((a,w)=> a + (Number(w[k])||0), 0);
+  // Line values are NET of that line's churn — "Net MRR is what counts".
+  let gfFleetGross = OPENING_MRR.gfFleets + sum('gfNewMRR') - sum('gfChurn');
+  let gfDriverGross = OPENING_MRR.gfDrivers + sum('gfB2cMRR') - sum('gfChurnB2c');
+  let gfChurnRun = sum('gfChurn') + sum('gfChurnB2c');
+  let gfRunning = gfFleetGross + gfDriverGross;
+  let fvRunning = OPENING_MRR.fv + sum('fvNewMRR') - sum('fvChurn');
+  let running = gfRunning + fvRunning;
+  // Committed and wired are tracked separately so a commitment that is later
+  // wired isn't counted twice; "secured" = the larger of the two.
+  let frCommitRun = sum('frCommitted'), frWiredRun = sum('frClosedCash');
+  let frRunning = Math.max(frCommitRun, frWiredRun);
+  let cumTouches=sum('frTouches'), cumResponses=sum('frResponses'), cumMeetHeld=sum('frMeetHeld'),
+      cumDD=sum('frDD'), cumTermSheets=sum('frTermSheets'), cumCloses=sum('frCloses');
+  openingCache = { total: running, fromWeeks: pre.length, gf: gfRunning, fv: fvRunning, fr: frRunning,
+    cumTouches, cumResponses, cumMeetHeld, cumDD, cumTermSheets, cumCloses };
   const series = [];
-  for (let n=1; n<=13; n++){
+  for (let n=1; n<=WEEKS.length; n++){
     const w = byNum[n];
     const logged = !!w;
     if (logged){
-      const gfNet = (Number(w.gfNewMRR)||0) + (Number(w.gfB2cMRR)||0) - (Number(w.gfChurn)||0);
+      const gfNet = (Number(w.gfNewMRR)||0) + (Number(w.gfB2cMRR)||0) - (Number(w.gfChurn)||0) - (Number(w.gfChurnB2c)||0);
       const fvNet = (Number(w.fvNewMRR)||0) - (Number(w.fvChurn)||0);
       gfRunning += gfNet; fvRunning += fvNet; running += gfNet + fvNet;
-      frRunning += (Number(w.frCommitted)||0) + (Number(w.frClosedCash)||0);
+      gfFleetGross += (Number(w.gfNewMRR)||0) - (Number(w.gfChurn)||0);
+      gfDriverGross += (Number(w.gfB2cMRR)||0) - (Number(w.gfChurnB2c)||0);
+      gfChurnRun += (Number(w.gfChurn)||0) + (Number(w.gfChurnB2c)||0);
+      frCommitRun += Number(w.frCommitted)||0; frWiredRun += Number(w.frClosedCash)||0;
+      frRunning = Math.max(frCommitRun, frWiredRun);
       cumTouches += Number(w.frTouches)||0; cumResponses += Number(w.frResponses)||0;
       cumMeetHeld += Number(w.frMeetHeld)||0; cumDD += Number(w.frDD)||0;
       cumTermSheets += Number(w.frTermSheets)||0; cumCloses += Number(w.frCloses)||0;
     }
     series.push({ n, monday:WEEKS[n-1].monday, logged, cumulative:running,
       gfCum:gfRunning, fvCum:fvRunning, frCum:frRunning,
+      gfFleetGross, gfDriverGross, gfChurnRun, frCommitRun, frWiredRun,
       cumTouches, cumResponses, cumMeetHeld, cumDD, cumTermSheets, cumCloses, raw:w });
   }
   return series;
@@ -237,34 +315,41 @@ function seriesFrom(weeksData){
 function renderChart(series){
   const W=900,H=280,padL=54,padR=20,padT=16,padB=34;
   const plotW=W-padL-padR, plotH=H-padT-padB;
-  const x = n => padL + (n/13)*plotW;
-  const yMax = Math.max(STRETCH*1.05, ...series.map(s=>s.cumulative*1.1), 1000);
+  const NW = WEEKS.length;
+  const x = n => padL + (n/NW)*plotW;
+  const yMax = Math.max(FLOOR*1.1, ...series.map(s=>s.cumulative*1.1), 1000);
   const y = v => padT + plotH - (v/yMax)*plotH;
 
   let grid='';
-  [0, STRETCH/2, STRETCH].forEach(t=>{
+  [0, FLOOR/2, FLOOR].forEach(t=>{
     grid += `<line x1="${padL}" y1="${y(t)}" x2="${W-padR}" y2="${y(t)}" stroke="var(--border)" stroke-width="1"/>`;
     grid += `<text x="${padL-8}" y="${y(t)+4}" text-anchor="end" font-size="10.5">${fmt$(t)}</text>`;
   });
 
-  let floorPts='', stretchPts='';
-  for (let n=0;n<=13;n++){ floorPts += `${x(n)},${y(FLOOR*n/13)} `; stretchPts += `${x(n)},${y(STRETCH*n/13)} `; }
 
-  let actualPts = `${x(0)},${y(0)} `, dots='';
+  // Sprint 01 plan target (end-of-week total MRR), placed on the dashboard
+  // weeks whose Monday matches a plan week.
+  let planPts = `${x(0)},${y(0)} `, planDots = '';
+  WEEKS.forEach(w=>{ const pl = planFor(w.monday); if (pl){
+    planPts += `${x(w.n)},${y(pl.total)} `;
+    planDots += `<circle cx="${x(w.n)}" cy="${y(pl.total)}" r="2.6" fill="var(--navy)"/>`;
+  }});
+
+  let actualPts = `${x(0)},${y(openingCache.total)} `, dots='';
   series.forEach(s=>{ if(s.logged){
     actualPts += `${x(s.n)},${y(s.cumulative)} `;
     dots += `<circle cx="${x(s.n)}" cy="${y(s.cumulative)}" r="4" fill="var(--green)" stroke="#fff" stroke-width="1.5"/>`;
   }});
 
   const ti = todayInfo();
-  const todayX = x(Math.min(13, ti.currentWeek || 0) + ((new Date()-START)/86400000 % 7)/7);
+  const todayX = x(Math.min(NW, Math.max(0, (daysBetween(START_ISO, bizToday()) + 0.5)/7)));
 
   document.getElementById('chartSvg').innerHTML = `
     ${grid}
     <line x1="${x(0)}" y1="${padT}" x2="${x(0)}" y2="${H-padB}" stroke="var(--border)"/>
     <line x1="${padL}" y1="${H-padB}" x2="${W-padR}" y2="${H-padB}" stroke="var(--border)"/>
-    <polyline points="${stretchPts}" fill="none" stroke="var(--muted-2)" stroke-width="1.5" stroke-dasharray="3 5"/>
-    <polyline points="${floorPts}" fill="none" stroke="var(--watch)" stroke-width="1.5" stroke-dasharray="3 5"/>
+    <polyline points="${planPts}" fill="none" stroke="var(--navy)" stroke-width="1.6" stroke-dasharray="4 4" opacity=".8"/>
+    ${planDots}
     <polyline points="${actualPts}" fill="none" stroke="var(--green)" stroke-width="2.5"/>
     ${dots}
     <line x1="${todayX}" y1="${padT}" x2="${todayX}" y2="${H-padB}" stroke="var(--navy)" stroke-width="1" stroke-dasharray="3 3" opacity=".35"/>
@@ -272,11 +357,11 @@ function renderChart(series){
   `;
 }
 
-function statusFor(cumulative, n, floor){
-  const targetAtN = floor*n/13;
-  if (cumulative >= targetAtN) return 'ok';
-  if (cumulative >= targetAtN*0.7) return 'watch';
-  return 'risk';
+/** Total-MRR status against the Sprint 01 plan's target for week n
+    (On pace ≥100% · Watch 75–99% · Behind <75%). */
+function statusFor(cumulative, n){
+  const plan = WEEKS[n-1] && planFor(WEEKS[n-1].monday);
+  return plan ? planStatus(cumulative, plan.total) : 'ok';
 }
 
 function rateBadge(rate, benchmark){
@@ -286,18 +371,21 @@ function rateBadge(rate, benchmark){
 
 function renderNorthStar(series){
   const lastLogged = [...series].reverse().find(s=>s.logged);
-  const cumulative = lastLogged ? lastLogged.cumulative : 0;
-  const frCumulative = lastLogged ? lastLogged.frCum : 0;
+  const cumulative = lastLogged ? lastLogged.cumulative : openingCache.total;
+  const frCumulative = lastLogged ? lastLogged.frCum : (openingCache.fr || 0);
   const ti = todayInfo();
-  const weeksRemaining = Math.max(1, 13 - (ti.currentWeek||0));
+  const weeksRemaining = Math.max(1, WEEKS.length - (ti.currentWeek||0));
 
   document.getElementById('statCum').textContent = fmt$(cumulative);
-  document.getElementById('statGfMRR').textContent = fmt$(lastLogged ? lastLogged.gfCum : 0);
-  document.getElementById('statFvMRR').textContent = fmt$(lastLogged ? lastLogged.fvCum : 0);
+  document.getElementById('statGfMRR').textContent = fmt$(lastLogged ? lastLogged.gfCum : (openingCache.gf || 0));
+  document.getElementById('statFvMRR').textContent = fmt$(lastLogged ? lastLogged.fvCum : (openingCache.fv || 0));
   const gap = Math.max(0, FLOOR - cumulative);
-  document.getElementById('statGap').innerHTML = gap===0 ? 'Floor met &mdash; pushing to $10K' : fmt$(gap);
-  document.getElementById('statPace').textContent = gap===0
-    ? fmt$(Math.max(0,(STRETCH-cumulative))/weeksRemaining) : fmt$(gap/weeksRemaining);
+  document.getElementById('statGap').innerHTML = gap===0 ? 'Goal met &mdash; pushing to $10K stretch' : fmt$(gap);
+  // Plan is back-loaded: show what this week's plan target still needs.
+  const curPlan = WEEKS[(ti.currentWeek||1)-1] && planFor(WEEKS[(ti.currentWeek||1)-1].monday);
+  document.getElementById('statPace').textContent = curPlan
+    ? fmt$(Math.max(0, curPlan.total - cumulative)) + ' (wk ' + curPlan.pw + ' target ' + fmt$(curPlan.total) + ')'
+    : '—';
 
   const circ = 2*Math.PI*45;
   const ringPct = Math.min(100, Math.round((cumulative/FLOOR)*100));
@@ -312,25 +400,34 @@ function renderNorthStar(series){
   ringFr.setAttribute('stroke-dasharray', circ.toFixed(1));
   ringFr.setAttribute('stroke-dashoffset', (circ*(1-frRingPct/100)).toFixed(1));
   document.getElementById('statFrSecured').textContent = fmt$(frCumulative);
+  const cw = lastLogged || { frCommitRun:0, frWiredRun:0 };
+  const fs = document.getElementById('statFrSplit');
+  if (fs) fs.textContent = `${fmt$(cw.frCommitRun||0)} committed · ${fmt$(cw.frWiredRun||0)} wired`;
 
-  const loggedWeeks = series.filter(s=>s.logged);
+  // Same rows, same rules as the Benchmark vs actual table.
+  const vrows = varianceRows(series).filter(r => r.plan && r.lines.total);
   let paceStatus='none', paceLabel='No weeks logged yet';
-  if (loggedWeeks.length){
-    const last = loggedWeeks[loggedWeeks.length-1];
-    const st = statusFor(last.cumulative, last.n, FLOOR);
-    paceStatus = st;
-    paceLabel = st==='ok' ? 'On pace for the $8K floor'
-              : st==='watch' ? 'Behind pace — watch closely'
-              : 'Off pace vs. the $8K floor line';
+  if (vrows.length){
+    const last = vrows[vrows.length-1], L = last.lines.total;
+    paceStatus = L.status;
+    paceLabel = L.status==='ok' ? `On pace — week ${last.s.n} plan target ${fmt$(L.target)}`
+              : L.status==='watch' ? `Watch — ${L.pct}% of the week ${last.s.n} plan target`
+              : `Behind — ${L.pct}% of the week ${last.s.n} plan target (${fmt$(L.target)})`;
   }
   const pill = document.getElementById('pacePill');
   pill.className = 'pill ' + (paceStatus==='none'?'':paceStatus);
   document.getElementById('paceLabel').textContent = paceLabel;
 
-  const last2 = loggedWeeks.slice(-2);
-  const bothBehind = last2.length===2 && last2.every(s => statusFor(s.cumulative, s.n, FLOOR)==='risk');
-  document.getElementById('escalationBanner').innerHTML = bothBehind
-    ? `<div class="banner risk"><span>&#9888;</span><div><b>Escalation trigger:</b> two straight weeks behind the $8K pace line. Shift to a partnership-led push rather than more outbound volume.</div></div>`
+  // "Line behind two weeks running → name the cause first."
+  const LINE_NAMES = { total:'total MRR', gfFleets:'grey fleet (fleets)', gfDrivers:'grey fleet (drivers)', fv:'fuel verification' };
+  let behindLines = [];
+  if (vrows.length >= 2){
+    const a = vrows[vrows.length-2], b = vrows[vrows.length-1];
+    if (b.s.n === a.s.n + 1)
+      behindLines = Object.keys(LINE_NAMES).filter(k => a.lines[k].status==='risk' && b.lines[k].status==='risk');
+  }
+  document.getElementById('escalationBanner').innerHTML = behindLines.length
+    ? `<div class="banner risk"><span>&#9888;</span><div><b>Behind the Sprint 01 plan two weeks running:</b> ${behindLines.map(k=>LINE_NAMES[k]).join(', ')}. Name the cause first — volume, conversion, or deal timing. More volume rarely fixes a conversion problem.</div></div>`
     : '';
 
   const reset = id => { document.getElementById(id).innerHTML = '&mdash;'; };
@@ -342,39 +439,38 @@ function renderNorthStar(series){
     if (d) document.getElementById('statDdRate').innerHTML   = rateBadge(ts/d, 0.40);
     if (ts) document.getElementById('statCloseRate').innerHTML = rateBadge(c/ts, 0.60);
   }
-
-  const lastPartnerWeek = [...series].reverse().find(s =>
-    s.raw && ((Number(s.raw.gfPartner)||0)>0 || (Number(s.raw.fvPartner)||0)>0));
-  const pd = document.getElementById('statPartnerDays');
-  if (lastPartnerWeek){
-    const days = Math.round((new Date() - new Date(lastPartnerWeek.monday+'T00:00:00Z'))/86400000);
-    pd.textContent = days + (days===1?' day':' days');
-  } else {
-    pd.innerHTML = '&mdash;';
-  }
 }
 
 /* ---------- week history tables ---------- */
 
+/** "Updated by" cell for a logged week: who saved it last, and when. */
+function whoCell(r){
+  if (!r || !r.updatedBy) return `<td class="whocell"><span class="muted">—</span></td>`;
+  const when = r.updatedAt ? new Date(r.updatedAt).toLocaleString('en-US',
+    {month:'short', day:'numeric', hour:'numeric', minute:'2-digit'}) : '';
+  return `<td class="whocell"><b>${esc(r.updatedBy)}</b>${when ? `<span class="whenline">${when}</span>` : ''}</td>`;
+}
+
 function historyRowsGf(series){
   const rows = series.filter(s=>s.logged);
-  if (!rows.length) return `<tr class="empty-row"><td colspan="8">No weeks logged yet &mdash; the first Monday review is Sep 14, 2026.</td></tr>`;
+  if (!rows.length) return `<tr class="empty-row"><td colspan="9">No weeks logged yet &mdash; week 1 starts Mon Sep 28, 2026.</td></tr>`;
   return rows.map(s=>{
     const r = s.raw;
-    const net = (Number(r.gfNewMRR)||0)+(Number(r.gfB2cMRR)||0)-(Number(r.gfChurn)||0);
+    const churn = (Number(r.gfChurn)||0)+(Number(r.gfChurnB2c)||0);
+    const net = (Number(r.gfNewMRR)||0)+(Number(r.gfB2cMRR)||0)-churn;
     const cf = Number(r.gfCacFleet), cs = Number(r.gfCacSub);
     const cacOver = (cf && cf>CAC_FLEET_CEIL) || (cs && cs>CAC_SUB_CEIL);
     return `<tr><td>Week ${s.n}</td>
       <td class="num">${fmt$(Number(r.gfNewMRR)||0)}</td><td class="num">${fmt$(Number(r.gfB2cMRR)||0)}</td>
-      <td class="num">${fmt$(Number(r.gfChurn)||0)}</td><td class="num">${fmt$(net)}</td>
+      <td class="num">${fmt$(churn)}</td><td class="num">${fmt$(net)}</td>
       <td class="num"><b>${fmt$(s.gfCum)}</b></td><td>${esc(r.gfFocus||'—')}</td>
-      <td>${cacOver?'<span class="pill risk"><span class="dot"></span>over</span>':'<span class="pill ok"><span class="dot"></span>ok</span>'}</td></tr>`;
+      <td>${cacOver?'<span class="pill risk"><span class="dot"></span>over</span>':'<span class="pill ok"><span class="dot"></span>ok</span>'}</td>${whoCell(r)}</tr>`;
   }).join('');
 }
 
 function historyRowsFv(series){
   const rows = series.filter(s=>s.logged);
-  if (!rows.length) return `<tr class="empty-row"><td colspan="7">No weeks logged yet.</td></tr>`;
+  if (!rows.length) return `<tr class="empty-row"><td colspan="8">No weeks logged yet.</td></tr>`;
   return rows.map(s=>{
     const r = s.raw;
     const cacOver = Number(r.fvCac) && Number(r.fvCac)>CAC_FLEET_CEIL;
@@ -382,20 +478,356 @@ function historyRowsFv(series){
       <td class="num">${fmt$(Number(r.fvNewMRR)||0)}</td><td class="num">${fmt$(Number(r.fvChurn)||0)}</td>
       <td class="num"><b>${fmt$(s.fvCum)}</b></td><td>${esc(r.fvFocus||'—')}</td>
       <td>${String(r.fvTestimonial)==='1'?'<span class="pill ok"><span class="dot"></span>secured</span>':'<span class="pill watch"><span class="dot"></span>not yet</span>'}</td>
-      <td>${cacOver?'<span class="pill risk"><span class="dot"></span>over</span>':'<span class="pill ok"><span class="dot"></span>ok</span>'}</td></tr>`;
+      <td>${cacOver?'<span class="pill risk"><span class="dot"></span>over</span>':'<span class="pill ok"><span class="dot"></span>ok</span>'}</td>${whoCell(r)}</tr>`;
   }).join('');
 }
 
 function historyRowsFr(series){
   const rows = series.filter(s=>s.logged);
-  if (!rows.length) return `<tr class="empty-row"><td colspan="8">No weeks logged yet.</td></tr>`;
+  if (!rows.length) return `<tr class="empty-row"><td colspan="9">No weeks logged yet.</td></tr>`;
   return rows.map(s=>{
     const r = s.raw;
     return `<tr><td>Week ${s.n}</td>
       <td class="num">${Number(r.frTouches)||0}</td><td class="num">${Number(r.frResponses)||0}</td>
       <td class="num">${Number(r.frMeetHeld)||0}</td><td class="num">${Number(r.frTermSheets)||0}</td>
       <td class="num">${fmt$(Number(r.frCommitted)||0)}</td><td class="num">${fmt$(Number(r.frClosedCash)||0)}</td>
-      <td>${esc(r.frFocus||'—')}</td></tr>`;
+      <td>${esc(r.frFocus||'—')}</td>${whoCell(r)}</tr>`;
+  }).join('');
+}
+
+/* ---------- Sprint 01 benchmark & variance ---------- */
+
+const STATUS_WORD = { ok:'On pace', watch:'Watch', risk:'Behind' };
+
+/** Actual end-of-week MRR by plan line for one series point (opening MRR included). */
+function actualsFor(s){
+  // Opening MRR (pre-sprint weeks + OPENING_MRR) is already in the series.
+  return { gfFleets:s.gfFleetGross, gfDrivers:s.gfDriverGross, fv:s.fvCum, total:s.cumulative };
+}
+
+/** Plan rows with actuals, variance and status (doc rules), one per dashboard week. */
+function varianceRows(series){
+  const today = bizToday();
+  const prevRaw = {};   // previous logged plan week's status before the two-week rule
+  return series.map(s=>{
+    const plan = planFor(s.monday);
+    const sunday = addDays(s.monday, 6);
+    const reviewDay = addDays(sunday, 1);   // the following Monday's 7-step check
+    const state = !plan ? 'pre' : s.logged ? 'logged'
+                : today > reviewDay ? 'missing' : today > sunday ? 'due'
+                : today >= s.monday ? 'current' : 'upcoming';
+    const lines = {};
+    if (plan && s.logged){
+      const act = actualsFor(s);
+      for (const k of ['gfFleets','gfDrivers','fv','total']){
+        const raw = planStatus(act[k], plan[k]);
+        // "Behind = under 75%, or Watch two weeks in a row."
+        const st = (raw === 'watch' && prevRaw[k] === 'watch') ? 'risk' : raw;
+        lines[k] = { actual:act[k], target:plan[k], diff:act[k]-plan[k],
+                     pct: plan[k] ? Math.floor(act[k]/plan[k]*100) : null, status:st };
+        prevRaw[k] = raw;
+      }
+    } else if (plan && state === 'missing'){
+      for (const k of Object.keys(prevRaw)) delete prevRaw[k];
+    }
+    return { s, plan, state, lines };
+  });
+}
+
+function varCell(line, target){
+  if (!line) return `<td class="varcell"><span class="vtarget">${fmt$(target)}</span></td>`;
+  const sign = line.diff > 0 ? '+' : line.diff < 0 ? '−' : '±';
+  return `<td class="varcell ${line.status}">
+    <span class="vactual">${fmt$(line.actual)}</span>
+    <span class="vtarget">of ${fmt$(line.target)}</span>
+    <span class="vdiff">${sign}${fmt$(Math.abs(line.diff))}${line.pct!=null?` · ${line.pct}%`:''}</span>
+    <span class="vstatus">${STATUS_WORD[line.status]}</span>
+  </td>`;
+}
+
+function renderVariance(series){
+  // A re-render would drop a note being typed: save it first (blur commits).
+  const active = document.activeElement;
+  if (active && active.classList && active.classList.contains('statusnote') &&
+      document.getElementById('varianceBody').contains(active)) active.blur();
+  const rows = varianceRows(series);
+  const body = rows.map(({s, plan, state, lines})=>{
+    const wkDate = new Date(s.monday+'T00:00:00Z').toLocaleDateString('en-US',{month:'short',day:'numeric',timeZone:'UTC'});
+    if (!plan){
+      const wk = `<td class="vweek"><b>Week ${s.n}</b><span>${wkDate}</span></td>`;
+      return `<tr class="vpre">${wk}<td colspan="6" class="vnote">Before Sprint 01 starts (Sep 28) — no plan target for this week.</td></tr>`;
+    }
+    const overall = lines.total ? lines.total.status : null;
+    const stateCell = overall
+      ? `<span class="pill ${overall}"><span class="dot"></span>${STATUS_WORD[overall]}</span>`
+      : state === 'missing' ? `<span class="pill risk"><span class="dot"></span>Not reported</span>`
+      : state === 'due' ? `<span class="pill watch"><span class="dot"></span>Due today</span>`
+      : state === 'current' ? `<span class="pill"><span class="dot"></span>This week</span>`
+      : `<span class="pill"><span class="dot"></span>Upcoming</span>`;
+    const wk = `<td class="vweek"><b>Week ${s.n}</b><span>${wkDate}</span>${stateCell}</td>`;
+    const miles = [plan.rev && `<div><b>Revenue:</b> ${esc(plan.rev)}</div>`,
+                   plan.raise && `<div><b>Raise:</b> ${esc(plan.raise)}</div>`,
+                   plan.actions && `<div><b>Top 3 actions:</b> ${plan.actions.map((x,i)=>`${i+1}. ${esc(x[0])} — ${esc(x[1])}`).join('; ')}</div>`,
+                   plan.also && `<div><b>Also:</b> ${esc(plan.also)}</div>`,
+                   plan.note && `<div class="vrule">${esc(plan.note)}</div>`,
+                   plan.rule && `<div class="vrule">${esc(plan.rule)}</div>`].filter(Boolean).join('');
+    return `<tr class="${plan.checkpoint?'vcheck':''}${state==='current'?' vcurrent':''}">${wk}
+      ${varCell(lines.gfFleets, plan.gfFleets)}${varCell(lines.gfDrivers, plan.gfDrivers)}
+      ${varCell(lines.fv, plan.fv)}${varCell(lines.total, plan.total)}
+      ${state === 'upcoming'
+        ? `<td class="vreview"><span class="muted">Opens ${new Date(s.monday+'T00:00:00Z').toLocaleDateString('en-US',{month:'short',day:'numeric',timeZone:'UTC'})}</span></td>`
+        : statusCell('wk', 'wk:' + s.n, 'Week ' + s.n + ' review (' + new Date(s.monday+'T00:00:00Z').toLocaleDateString('en-US',{month:'short',day:'numeric',timeZone:'UTC'}) + ')', trackerCache).replace('class="statuscell"','class="statuscell vreview"')}
+      <td class="vmiles">${miles}</td></tr>`;
+  }).join('');
+  document.getElementById('varianceBody').innerHTML = body;
+  document.querySelectorAll('#varianceBody .whynote').forEach(fitWhy);
+  const foot = document.getElementById('varOpening');
+  if (foot) foot.textContent = openingCache.total
+    ? `Totals include ${fmt$(openingCache.total)} MRR already running before Sprint 01` +
+      (openingCache.fromWeeks ? ' (weeks saved for Sep 14 and Sep 21).' : ' (opening MRR set in data.js).')
+    : '';
+
+  // One-line summary of the latest logged plan week, leading with overall status.
+  const last = [...rows].reverse().find(r => r.plan && r.lines.total);
+  const sum = document.getElementById('varianceSummary');
+  if (!last){
+    sum.innerHTML = 'No Sprint 01 week logged yet. Week 1 (Sep 28) targets <b>$170</b> total MRR.';
+  } else {
+    const L = last.lines, word = k => `${STATUS_WORD[L[k].status]}`;
+    const behind = ['gfFleets','gfDrivers','fv'].filter(k => L[k].status !== 'ok')
+      .map(k => ({gfFleets:'grey fleet (fleets)', gfDrivers:'grey fleet (drivers)', fv:'fuel verification'})[k]);
+    sum.innerHTML = `<span class="pill ${L.total.status}"><span class="dot"></span>${word('total')}</span>
+      Week ${last.s.n}: total MRR <b>${fmt$(L.total.actual)}</b> vs <b>${fmt$(L.total.target)}</b> target
+      (${L.total.diff>=0?'+':'−'}${fmt$(Math.abs(L.total.diff))}, ${L.total.pct}%).
+      ${behind.length ? 'Below target: ' + behind.join(', ') + '. Name the cause first — volume, conversion, or deal timing.' : 'Every line at or above target.'}`;
+  }
+}
+
+/** "This week's plan" card beside the weekly entry form. */
+function renderWeekPlan(n){
+  const w = WEEKS.find(x => x.n === Number(n));
+  const el = document.getElementById('weekPlan');
+  if (!w || !el) return;
+  const plan = planFor(w.monday);
+  if (!plan){
+    el.innerHTML = `<div class="plancard pre"><b>Week ${w.n} is before Sprint 01.</b> This week has no reference target in the Sprint 01 plan.</div>`;
+    return;
+  }
+  el.innerHTML = `<div class="plancard${plan.checkpoint?' check':''}">
+    <div class="planhead"><span class="eyebrow">Plan benchmark · Sprint 01 week ${plan.pw} of ${WEEKS.length}</span>
+      <span class="plansrc">${esc(PLAN_SOURCE)}</span></div>
+    <div class="plangrid">
+      <div><span>Grey fleet — fleets</span><b>${fmt$(plan.gfFleets)}</b></div>
+      <div><span>Grey fleet — drivers</span><b>${fmt$(plan.gfDrivers)}</b></div>
+      <div><span>Fuel verification</span><b>${fmt$(plan.fv)}</b></div>
+      <div class="tot"><span>Total MRR, end of week</span><b>${fmt$(plan.total)}</b></div>
+    </div>
+    ${plan.rev?`<div class="planmile"><b>Revenue milestone:</b> ${esc(plan.rev)}</div>`:''}
+    ${plan.raise?`<div class="planmile"><b>Raise milestone:</b> ${esc(plan.raise)}</div>`:''}
+    ${plan.actions?`<div class="planmile"><b>Top 3 actions:</b><ol class="planacts">${plan.actions.map(x=>`<li>${esc(x[0])} — <b>${esc(x[1])}</b></li>`).join('')}</ol></div>`:''}
+    ${plan.also?`<div class="planmile"><b>Also:</b> ${esc(plan.also)}</div>`:''}
+    ${plan.note?`<div class="planmile rule">${esc(plan.note)}</div>`:''}
+    ${plan.rule?`<div class="planmile rule">${esc(plan.rule)}</div>`:''}
+  </div>`;
+}
+
+/* ---------- runway, flags, gates, paid-ad numbers, ops table ---------- */
+
+const MONTH_DAYS = 30.44;
+function lastWith(series, pred){ return [...series].reverse().find(s => s.logged && pred(s.raw)); }
+function fmtDate(iso){ return new Date(iso+'T00:00:00Z').toLocaleDateString('en-US',{month:'short', day:'numeric', year:'numeric', timeZone:'UTC'}); }
+
+function renderRunway(series){
+  const el = document.getElementById('statRunway'), ban = document.getElementById('runwayBanner');
+  const w = [...series].reverse().find(s => s.logged);
+  const spend = w ? Number(w.raw.opSpend)||0 : 0, cash = w ? Number(w.raw.opCash)||0 : 0;
+  if (!w || !spend || !cash){
+    el.textContent = w ? `not reported (wk ${w.n})` : 'not reported';
+    ban.innerHTML = ''; return;
+  }
+  const months = cash / spend;
+  const outIso = addDays(addDays(w.monday, 6), Math.floor(months * MONTH_DAYS));
+  const red = outIso < RUNWAY_NEEDED_UNTIL;
+  el.innerHTML = `<span style="color:var(--${red?'risk':'ok'});">${months.toFixed(1)} mo</span>`;
+  ban.innerHTML = red
+    ? `<div class="banner risk"><span class="ico">&#9888;</span><div><b>Runway red (week ${w.n}):</b> ${fmt$(cash)} cash ÷ ${fmt$(spend)}/month = ${months.toFixed(1)} months — cash runs out around ${fmtDate(outIso)}, before expected close (${esc(CLOSE_WEEKS)}) + 3 months (${fmtDate(RUNWAY_NEEDED_UNTIL)}). Fixes: ${esc(RUNWAY_FIXES)}.</div></div>`
+    : '';
+}
+
+function renderFlags(series){
+  const out = [], today = bizToday();
+  // Partner conversations — "at least one every week; flag if 7+ days pass".
+  // Weekly data has no exact date, so count from the end of the last week
+  // with a partner conversation (the most generous reading).
+  const lastP = [...series].reverse().find(s => s.logged && ((Number(s.raw.gfPartner)||0) + (Number(s.raw.fvPartner)||0)) > 0);
+  const pd = document.getElementById('statPartnerDays');
+  const sprintDays = daysBetween(START_ISO, today);
+  if (lastP){
+    const days = daysBetween(addDays(lastP.monday, 6), today);
+    pd.textContent = days <= 0 ? `this week (wk ${lastP.n})` : `${days} day${days===1?'':'s'} (wk ${lastP.n})`;
+    if (days >= 7) out.push(`<div class="banner risk"><span>&#9888;</span><div><b>${days} days since the last logged partner conversation</b> (week ${lastP.n}). The plan needs at least one every week — flag at 7+ days.</div></div>`);
+  } else {
+    pd.textContent = 'none logged';
+    if (sprintDays >= 7) out.push(`<div class="banner risk"><span>&#9888;</span><div><b>No partner conversation logged yet</b> — ${sprintDays} days into the sprint. The plan needs at least one every week.</div></div>`);
+  }
+  // Churn — "flag the same week it appears": the current or just-finished week.
+  const ti = todayInfo();
+  series.filter(s => s.logged && s.n >= ti.currentWeek - 1 && s.n <= ti.currentWeek).forEach(s=>{
+    const r = s.raw, f = Number(r.gfChurn)||0, d = Number(r.gfChurnB2c)||0, v = Number(r.fvChurn)||0;
+    if (f + d + v > 0) out.push(`<div class="banner watch"><span>&#9888;</span><div><b>Churn in week ${s.n}: ${fmt$(f+d+v)}</b> (grey-fleet fleets ${fmt$(f)}, drivers ${fmt$(d)}, fuel verification ${fmt$(v)}). Net MRR is what counts.</div></div>`);
+  });
+  // Cost limits — "any channel above its limit two weeks in a row → cut or change it".
+  const over = [
+    ['grey-fleet CAC per fleet', 'gfCacFleet', CAC_FLEET_CEIL],
+    ['CAC per paying driver', 'gfCacSub', CAC_SUB_CEIL],
+    ['fuel-verification CAC per fleet', 'fvCac', CAC_FLEET_CEIL]
+  ].filter(([,k,lim])=>{
+    const L = series.filter(s=>s.logged);
+    for (let i=1;i<L.length;i++){
+      const a = Number(L[i-1].raw[k])||0, b = Number(L[i].raw[k])||0;
+      if (L[i].n === L[i-1].n + 1 && a > lim && b > lim && i === L.length-1) return true;
+    }
+    return false;
+  }).map(x=>x[0]);
+  if (over.length) out.push(`<div class="banner risk"><span>&#9888;</span><div><b>Over the cost limit two weeks in a row:</b> ${over.join(', ')}. Cut or change that channel (limits $850 per fleet, $20 per paying driver).</div></div>`);
+  document.getElementById('flagBanner').innerHTML = out.join('');
+}
+
+function gateRow(ok, label, detail){
+  const mark = ok === null ? '<span class="gmark">—</span>' : ok ? '<span class="gmark ok">&#10003;</span>' : '<span class="gmark risk">&#10007;</span>';
+  return `<div class="grow">${mark}<div><b>${label}</b>${detail?`<span>${detail}</span>`:''}</div></div>`;
+}
+function renderGates(series){
+  const el = document.getElementById('gateCards');
+  if (!el) return;
+  const t = bizToday();
+  const logged = series.filter(s => s.logged);
+  const last = logged[logged.length-1];
+  // Week-8 checkpoint
+  const w8 = series[7], w8plan = planFor(w8.monday);
+  const alcoa = (trackerCache['plan:1'] || {}).status || 'ten';
+  let cp;
+  const w8Review = addDays(addDays(w8.monday, 6), 1);
+  if (w8.logged){
+    const okMRR = w8.cumulative >= 2000;
+    cp = gateRow(okMRR, `Week 8 (Nov 16): total MRR ${fmt$(w8.cumulative)} vs $2,000`,
+      okMRR ? 'Stay the course.' : 'Below $2,000: move Prity from Apollo to partner follow-up and partner-sourced leads (not more cold email), and reset expectations — $8K by week 17 is now unlikely.');
+  } else if (t > w8Review){
+    cp = gateRow(false, 'Week 8 (Nov 16): not reported', 'The checkpoint can’t be confirmed until week 8 is saved — never fill it with the target.');
+  } else {
+    cp = gateRow(null, 'Week 8 (Nov 16): total MRR ≥ $2,000 → stay the course',
+      last ? `Latest: ${fmt$(last.cumulative)} at week ${last.n}.` : 'No week logged yet.');
+  }
+  const alcoaOk = alcoa === 'hundred';
+  const pastW8 = t > addDays(w8.monday, 6);
+  cp += gateRow(alcoaOk ? true : (pastW8 ? false : null), 'Alcoa at 100 trucks by week 8',
+    alcoaOk ? 'Done.' : pastW8 ? 'Not at 100 — escalate directly.' : `Now: ${statusLabel('alcoa', alcoa)}.`);
+  // Pitch gate (week 13), evaluated on the latest logged week
+  let pg = '';
+  if (!last){
+    pg = gateRow(null, 'Pitch gate (week 13, Dec 21)', 'No week logged yet.');
+  } else {
+    const mrrOk = last.cumulative >= 5000;
+    // MRR grew in 3 of the last 4 weeks (consecutive logged weeks)
+    let grew = null, growDetail = 'Needs 4 logged weeks in a row.';
+    const lastIdx = last.n - 1;
+    if (lastIdx >= 4 && [0,1,2,3,4].every(k => series[lastIdx-k].logged)){
+      let g = 0; for (let k=0;k<4;k++) if (series[lastIdx-k].cumulative > series[lastIdx-k-1].cumulative) g++;
+      grew = g >= 3; growDetail = `Grew in ${g} of the last 4 weeks.`;
+    } else if (lastIdx === 3 && [0,1,2,3].every(k => series[lastIdx-k].logged)){
+      let g = 0; for (let k=0;k<3;k++) if (series[lastIdx-k].cumulative > series[lastIdx-k-1].cumulative) g++;
+      if (series[0].cumulative > openingCache.total) g++;
+      grew = g >= 3; growDetail = `Grew in ${g} of the last 4 weeks.`;
+    }
+    // Gate inputs come from the latest logged week only — never an older week.
+    const fleets = Number(last.raw.opPayingFleets) > 0 ? Number(last.raw.opPayingFleets) : null;
+    const top = Number(last.raw.opTopCustomer) > 0 ? Number(last.raw.opTopCustomer) : null;
+    const share = top !== null && last.cumulative > 0 ? top / last.cumulative : null;
+    pg = gateRow(mrrOk, `Total MRR ≥ $5,000`, `Now ${fmt$(last.cumulative)} (week ${last.n}).`)
+       + gateRow(grew, 'MRR grew in 3 of the last 4 weeks', growDetail)
+       + gateRow(fleets === null ? null : fleets >= 20, '20+ paying fleets', fleets === null ? `Not reported for week ${last.n} — enter in Ops & runway.` : `${fleets} paying fleets (week ${last.n}).`)
+       + gateRow(share === null ? null : share <= 0.25, 'No customer over ~25% of MRR (Alcoa included)', share === null ? `Not reported for week ${last.n} — enter the largest customer’s MRR in Ops & runway.` : `Largest customer = ${Math.ceil(share*100)}% of MRR (week ${last.n}).`);
+    const met = mrrOk && grew && fleets !== null && fleets >= 20 && share !== null && share <= 0.25;
+    const gateDay = WEEKS[12].monday;   // Dec 21
+    pg += `<div class="gverdict ${met?'ok':''}">${
+      met && t >= gateDay ? 'Gate met — formal pitching can start.'
+      : met ? 'All four conditions met today — formal pitching still starts only at the week-13 gate (Dec 21).'
+      : t >= gateDay ? 'Not met — keep building relationships, send update #4, re-test weekly.'
+      : 'Not met yet — keep building relationships; the gate is checked at week 13 (Dec 21).'}</div>`;
+  }
+  el.innerHTML = `<div class="gblock"><h4>Week-8 checkpoint</h4>${cp}</div><div class="gblock"><h4>Pitch gate · week 13 (Dec 21)</h4>${pg}</div>`;
+}
+
+// Referral reward goes live in week 1 (Sep 28); driver-ad money only after 30 days of referral data.
+const DRIVER_ADS_EARLIEST = '2026-10-28';
+function renderAdLive(series){
+  const a = document.getElementById('adAuditLive'), d = document.getElementById('adDriverLive');
+  if (!a || !d) return;
+  const today = bizToday();
+  const L = series.filter(s=>s.logged);
+  const sum = k => L.reduce((t,s)=> t + (Number(s.raw[k])||0), 0);
+  const gateT = trackerCache['gate:tracking'] || {};
+  const gate = gateT.status || 'not-live';
+  const dateOf = iso => iso ? new Date(iso).toISOString().slice(0,10) : null;
+  // Spend before tracking was marked live breaches the gate (judged per week, not by today's status).
+  const liveSince = (need) => (need === 'site' ? ['site-live','all-live'] : ['all-live']).includes(gate) ? dateOf(gateT.updatedAt) : null;
+  const breach = (key, need) => {
+    const since = liveSince(need);
+    return L.filter(s => Number(s.raw[key]) > 0 && (!since || addDays(s.monday, 6) < since)).map(s => s.n);
+  };
+  const warn = msg => `<div class="adwarn">&#9888; ${msg}</div>`;
+
+  // Gated audit: needs website tracking; decide at day 45.
+  const aStart = L.find(s => Number(s.raw.opAuditSpend) > 0);
+  const aSpend = sum('opAuditSpend'), aLeads = sum('opAuditLeads');
+  if (!aStart) a.textContent = 'No spend logged.';
+  else {
+    const day = daysBetween(aStart.monday, today) + 1;
+    const cpl = aLeads ? aSpend / aLeads : null;
+    const verdict = day < 45 ? `day ${day} of 45 — too early to decide`
+      : cpl === null || cpl > 250 ? 'day 45+: stop (over $250 per good-fit lead)'
+      : cpl < 150 ? 'day 45+: increase (under $150)' : 'day 45+: hold ($150–250)';
+    const zone = day < 45 ? 'watch' : (cpl === null || cpl > 250) ? 'risk' : cpl < 150 ? 'ok' : 'watch';
+    a.innerHTML = `${fmt$(aSpend)} spent since week ${aStart.n} · ${aLeads} good-fit leads → ${cpl===null?'no leads yet':fmt$(cpl)+' per lead'} · <b class="z-${zone}">${verdict}</b>` +
+      ((b => b.length ? warn(`Spend in week ${b.join(', ')} before website tracking was live — the plan allows no ad spend until it is.`) : '')(breach('opAuditSpend','site')));
+  }
+
+  // Driver ads: referral first; ad money only after 30 days of referral data; decide at day 30.
+  const dStart = L.find(s => Number(s.raw.opDriverSpend) > 0);
+  // Referral reward start: when the driver-ads row was set to "Referral reward live";
+  // if it has moved past that, fall back to the plan (live in week 1).
+  const dT = trackerCache['plan:6'] || {};
+  const refStart = dT.status === 'referral-live' ? dateOf(dT.updatedAt) : dT.status && dT.status !== 'not-started' ? START_ISO : null;
+  const earliest = refStart ? addDays(refStart, 30) : '9999-12-31';
+  const dSpend = sum('opDriverSpend'), dUsers = sum('opDriverUsers'), intros = sum('opManagerIntros');
+  if (!dStart) d.textContent = 'No ad spend logged — referral reward first ($0).';
+  else {
+    const day = daysBetween(dStart.monday, today) + 1;
+    const cpu = dUsers ? dSpend / dUsers : null;
+    const in60 = L.some(s => s.n >= dStart.n && daysBetween(dStart.monday, s.monday) <= 60 && (Number(s.raw.gfJohn)||0) > 0);
+    const stop = cpu === null || cpu > 40 || intros === 0;
+    const verdict = day < 30 ? `day ${day} of 30 — too early to decide`
+      : stop ? `day 30+: stop (${cpu===null?'no users':cpu>40?'over $40 per active work-email user':'no manager intros'})`
+      : in60 ? 'day 30+: increase (3+ colleagues at one company within 60 days)' : 'day 30+: hold';
+    const zone = day < 30 ? 'watch' : stop ? 'risk' : in60 ? 'ok' : 'watch';
+    d.innerHTML = `${fmt$(dSpend)} spent since week ${dStart.n} · ${dUsers} active work-email users · ${intros} manager intros → ${cpu===null?'no users yet':fmt$(cpu)+' per user'} · <b class="z-${zone}">${verdict}</b>` +
+      (!refStart ? warn('Referral reward isn’t marked live yet — referral first; ad money only after 30 days of referral data.')
+        : addDays(dStart.monday, 6) < earliest ? warn(`Ad money logged before 30 days of referral data (earliest ${fmtDate(earliest)}).`) : '') +
+      ((b => b.length ? warn(`Spend in week ${b.join(', ')} before app events were live — the plan allows no ad spend until tracking is live.`) : '')(breach('opDriverSpend','app')));
+  }
+}
+
+function historyRowsOp(series){
+  const rows = series.filter(s=>s.logged);
+  if (!rows.length) return `<tr class="empty-row"><td colspan="8">No weeks logged yet.</td></tr>`;
+  return rows.map(s=>{
+    const r = s.raw, cash = Number(r.opCash)||0, spend = Number(r.opSpend)||0;
+    const months = cash && spend ? (cash/spend).toFixed(1) : '—';
+    const acts = [1,2,3].map(i => r['opAct'+i] ? `${esc(r['opAct'+i])}${r['opOwn'+i]?` <span class="muted">(${esc(r['opOwn'+i])})</span>`:''}` : '').filter(Boolean);
+    return `<tr><td>Week ${s.n}</td>
+      <td class="num">${cash?fmt$(cash):'—'}</td><td class="num">${spend?fmt$(spend):'—'}</td><td class="num">${months}</td>
+      <td class="num">${Number(r.opPayingFleets)||'—'}</td><td class="num">${Number(r.opTopCustomer)?fmt$(Number(r.opTopCustomer)):'—'}</td>
+      <td style="white-space:normal; min-width:240px;">${acts.length ? acts.join('<br>') : '—'}</td>${whoCell(r)}</tr>`;
   }).join('');
 }
 
@@ -406,23 +838,39 @@ function renderAll(weeksData){
   document.getElementById('gfHistoryBody').innerHTML = historyRowsGf(series);
   document.getElementById('fvHistoryBody').innerHTML = historyRowsFv(series);
   document.getElementById('frHistoryBody').innerHTML = historyRowsFr(series);
+  document.getElementById('opHistoryBody').innerHTML = historyRowsOp(series);
+  seriesCache = series;
+  renderVariance(series);
+  renderRunway(series);
+  renderFlags(series);
+  renderGates(series);
+  renderAdLive(series);
 }
 
 /* ---------- change-history panel ---------- */
 
 let versionCache = [];
+let trackerCache = {};   // latest tracker rows, shared by every tracked table
+const pendingTrackers = new Map();   // key → values of a save still in flight
+let seriesCache = null;   // latest weekly series, for re-rendering the variance table
 
 /** Formats one change value, handling both weekly fields and tracker statuses. */
 function fmtChange(entry, c, which){
   const raw = c[which];
   if (entry.scope === 'tracker'){
     if (c.field === 'status'){
-      const group = String(entry.ref_key).split(':')[0];
-      const setName = setForRow(entry.ref_key, group);
+      const key = entry.ref_key;
+      const group = String(key).split(':')[0];
+      const setName = setForRow(key, group);
+      // An entry saved under a row's earlier set reads in that set's words,
+      // including what an untouched row showed back then.
+      const saved = entry.data ? (entry.data.status || '') : '';
+      const legacy = legacySetForRow(key, group);
+      const isOld = legacy && saved !== '' && !inSet(setName, saved);
       // A row never touched has no stored status, but the chip has been
       // showing its default all along — so report that, not "(none)".
-      const shown = raw === '' ? defaultForRow(entry.ref_key, setName) : raw;
-      return statusLabel(setName, shown);
+      const shown = raw === '' ? (isOld ? legacyDefaultForRow(key, legacy) : defaultForRow(key, setName)) : raw;
+      return inSet(setName, shown) && !isOld ? statusLabel(setName, shown) : foreignLabel(key, group, shown);
     }
     return raw === '' ? '(blank)' : String(raw);
   }
@@ -468,7 +916,7 @@ function renderHistory(rows){
         </div>
         <div style="text-align:right;">
           <div class="hist-when">${when.toLocaleString('en-US',{dateStyle:'medium', timeStyle:'short'})}</div>
-          <button class="btn ghost tiny" data-restore="${i}" style="margin-top:6px;">Restore this version</button>
+          ${(r.scope==='week' && !(/^\d+$/.test(String(r.ref_key)) && Number(r.ref_key) >= 1)) ? '' : `<button class="btn ghost tiny" data-restore="${i}" style="margin-top:6px;">Restore this version</button>`}
         </div>
       </div>
       ${r.note ? `<div class="hist-note">${esc(r.note)}</div>` : ''}
@@ -502,7 +950,8 @@ function readFormValues(){
 }
 
 /* Which tab each field belongs to, so the tab strip can show unsaved counts. */
-const FIELD_TAB = id => id.startsWith('gf') ? 'gf' : id.startsWith('fv') ? 'fv' : 'fr';
+const FIELD_TAB = id => id.startsWith('gf') ? 'gf' : id.startsWith('fv') ? 'fv' : id.startsWith('op') ? 'op' : 'fr';
+const TABS = ['gf','fv','fr','op'];
 
 /**
  * Tracks which fields differ from what is stored, so the user can see at a
@@ -511,17 +960,17 @@ const FIELD_TAB = id => id.startsWith('gf') ? 'gf' : id.startsWith('fv') ? 'fv' 
  */
 function markDirtyTracking(baseline){
   const recount = () => {
-    const counts = { gf:0, fv:0, fr:0 };
+    const counts = { gf:0, fv:0, fr:0, op:0 };
     FORM_IDS.forEach(id=>{
       const el = document.getElementById('f_'+id);
       if (el && el.classList.contains('dirty')) counts[FIELD_TAB(id)]++;
     });
-    ['gf','fv','fr'].forEach(t=>{
+    TABS.forEach(t=>{
       const b = document.getElementById('count-'+t);
       b.textContent = counts[t] || '';
       b.classList.toggle('on', counts[t] > 0);
     });
-    const total = counts.gf + counts.fv + counts.fr;
+    const total = counts.gf + counts.fv + counts.fr + counts.op;
     setSaveState(total
       ? { text: total + ' unsaved change' + (total===1?'':'s'), kind:'dirty' }
       : { text:'', kind:'' });
@@ -719,6 +1168,7 @@ function showConnectionProblem(detail){
 }
 
 async function loadWeekIntoForm(n){
+  renderWeekPlan(n);
   let w = null;
   try{ w = await Store.loadWeek(n); }
   catch(e){ console.error('Could not load week', n, e); }
@@ -753,13 +1203,13 @@ async function loadWeekIntoForm(n){
       ' but not saved. Still unsaved — hit Save week to commit.');
   } else if (w && w.updatedBy){
     setSaveState({ text:'Last saved by ' + w.updatedBy + ' · ' +
-      new Date(w.updatedAt).toLocaleDateString('en-US',{month:'short',day:'numeric'}), kind:'' });
+      new Date(w.updatedAt).toLocaleString('en-US',{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'}), kind:'' });
   }
 }
 
 /** Switches the weekly-entry tabs, and remembers which one. */
 function showTab(which){
-  ['gf','fv','fr'].forEach(t=>{
+  TABS.forEach(t=>{
     document.getElementById('tab-'+t).setAttribute('aria-selected', String(t===which));
     document.getElementById('panel-'+t).hidden = (t !== which);
   });
@@ -780,10 +1230,16 @@ async function init(){
 
   const problem = await Store.healthCheck();
   const banner = document.getElementById('connBanner');
+  const sprintReady = problem ? true : await Store.sprintReady();
   if (problem){
     const local = Store.mode !== 'supabase';
     banner.innerHTML = `<div class="banner ${local?'watch':'risk'}"><span>&#9888;</span><div>
       <b>${local ? 'Browser-only storage' : 'Database unreachable'}:</b> ${esc(problem)}</div></div>`;
+  } else if (!sprintReady){
+    banner.innerHTML = `<div class="banner risk"><span>&#9888;</span><div>
+      <b>Database not yet on the Sprint 01 weeks.</b> Run <code>migrate_sprint01.sql</code> in Supabase → SQL Editor. Weekly saves are paused until then so numbers can't land in the wrong week; statuses still save.</div></div>`;
+    saveBtn.disabled = true;
+    saveBtn.dataset.blocked = '1';
   } else {
     banner.innerHTML = `<div class="banner"><span>&#10003;</span><div>
       <b>Connected.</b> Saves are stored in the shared database and survive refresh, new devices and new browsers. Every save is versioned below.</div></div>`;
@@ -806,7 +1262,7 @@ async function init(){
   document.getElementById('nextWeek').addEventListener('click', ()=> goToWeek(currentWeekShown + 1));
 
   /* Tabs */
-  ['gf','fv','fr'].forEach(t=>{
+  TABS.forEach(t=>{
     document.getElementById('tab-'+t).addEventListener('click', ()=> showTab(t));
   });
 
@@ -830,19 +1286,49 @@ async function init(){
     const sel = row.querySelector('.statussel');
     const noteEl = row.querySelector('.statusnote');
     const flash = row.querySelector('.flash');
+    const prevCached = trackerCache[key];
+    const vals = { status: sel.value, note: noteEl.value.trim() };
+    trackerCache[key] = Object.assign({}, prevCached, vals,
+      { updatedBy: editorSel.value, updatedAt: new Date().toISOString() });
+    pendingTrackers.set(key, trackerCache[key]);
     try{
       const { changes } = await Store.saveTracker(
-        key, label, { status: sel.value, note: noteEl.value.trim() }, editorSel.value
+        key, label, vals, editorSel.value
       );
+      pendingTrackers.delete(key);
       const chip = row.querySelector('.statuschip');
-      if (chip) chip.className = 'statuschip ' + statusClass(setForRow(key, group), sel.value);
+      if (chip){
+        const sn = setForRow(key, group);
+        chip.className = 'statuschip ' + (inSet(sn, sel.value) ? statusClass(sn, sel.value) : foreignClass(key, group, sel.value));
+      }
       if (changes.length){
+        trackerCache[key] = Object.assign({}, vals,
+          { updatedBy: editorSel.value, updatedAt: new Date().toISOString() });
+      } else {
+        trackerCache[key] = prevCached;   // nothing changed: keep the real last-updated
+      }
+      // Gate checks read tracker values (e.g. Alcoa's truck count).
+      if (seriesCache){ renderGates(seriesCache); renderAdLive(seriesCache); }
+      // The tables were rebuilt while this saved: redraw from the fresh cache.
+      if (!row.isConnected){ renderTrackedTables(trackerCache); return; }
+      // A week marked Variance needs a why.
+      if (group === 'wk'){
+        const needWhy = sel.value === 'variance' && !noteEl.value.trim();
+        noteEl.classList.toggle('needwhy', needWhy);
+        noteEl.placeholder = sel.value === 'variance' ? 'Why? Volume, conversion or deal timing — and the fix' : 'Add a note';
+        if (needWhy && el === sel) noteEl.focus();
+      }
+      if (changes.length){
+        const meta = row.querySelector('.statusmeta');
+        if (meta) meta.innerHTML = lastUpdatedText(editorSel.value, new Date().toISOString());
         flash.textContent = 'saved';
         flash.className = 'flash show';
         setTimeout(()=>{ flash.className = 'flash'; }, 1600);
         await reloadHistory();
       }
     }catch(e){
+      trackerCache[key] = prevCached;
+      pendingTrackers.delete(key);
       flash.textContent = 'save failed';
       flash.className = 'flash show err';
       toast('Status not saved', e.message, 'err');
@@ -857,7 +1343,8 @@ async function init(){
     if (ev.target.classList && ev.target.classList.contains('statusnote')) commitTracker(ev.target);
   }, true);
   document.addEventListener('keydown', ev=>{
-    if (ev.key === 'Enter' && ev.target.classList && ev.target.classList.contains('statusnote')){
+    if (ev.key === 'Enter' && !ev.shiftKey && ev.target.classList && ev.target.classList.contains('statusnote')){
+      ev.preventDefault();   // Enter saves; Shift+Enter adds a line in the why box
       ev.target.blur();
     }
   });
@@ -896,6 +1383,18 @@ async function init(){
   }
 
   historyReloader = reloadHistory;
+
+  /* Change history can be collapsed; the choice is remembered per browser. */
+  const histToggle = document.getElementById('histToggle');
+  const histBody = document.getElementById('histBody');
+  function setHistCollapsed(collapsed){
+    histBody.hidden = collapsed;
+    histToggle.setAttribute('aria-expanded', String(!collapsed));
+    histToggle.textContent = collapsed ? 'Expand' : 'Collapse';
+    saveUIState({ histCollapsed: collapsed });
+  }
+  histToggle.addEventListener('click', ()=> setHistCollapsed(!histBody.hidden));
+  setHistCollapsed(!!readUIState().histCollapsed);
 
   histPeriod.addEventListener('change', ()=>{
     syncCustomRange();
@@ -1007,7 +1506,7 @@ async function init(){
   });
 
   async function doSave(){
-    if (saveBtn.disabled) return;
+    if (saveBtn.disabled || saveBtn.dataset.blocked) return;
     const n = Number(weekSel.value);
     saveBtn.disabled = true;
     setSaveState({ text:'Saving…', kind:'' });
@@ -1060,6 +1559,20 @@ async function init(){
   }, { rootMargin:'-70px 0px -70% 0px' });
   document.querySelectorAll('section[id]').forEach(s=> spy.observe(s));
 
+  /* One time per browser: the saved "last week viewed" and unsaved drafts
+     used the old calendar (week 1 = Sep 14). Move them onto Sprint 01
+     weeks (week 1 = Sep 28) so nothing lands in the wrong week. */
+  try{
+    if (localStorage.getItem('fuelshine.calendar.ui') !== 'sprint01'){
+      const u = readUIState();
+      if (u.week) saveUIState({ week: Math.max(1, Number(u.week) - 2) });
+      const drafts = lsGet(DRAFT_KEY, {}), moved = {};
+      Object.keys(drafts).forEach(k=>{ const n = Number(k) - 2; if (n >= 1) moved[n] = drafts[k]; });
+      lsSet(DRAFT_KEY, moved);
+      localStorage.setItem('fuelshine.calendar.ui', 'sprint01');
+    }
+  }catch(e){ /* storage blocked */ }
+
   /* Put the person back where they were: same week, tab, filter and
      half-typed note as when they last had this page open. */
   const ui = readUIState();
@@ -1070,11 +1583,24 @@ async function init(){
   if (ui.to) histTo.value = ui.to;
   syncCustomRange();
   if (ui.note) noteInput.value = ui.note;
-  showTab(['gf','fv','fr'].includes(ui.tab) ? ui.tab : 'gf');
+  showTab(TABS.includes(ui.tab) ? ui.tab : 'gf');
 
   currentWeekShown = Number(weekSel.value);
   await loadWeekIntoForm(currentWeekShown);
   await refreshEverything();
+
+  /* The Monday check reports the week that just ended. On Monday/Tuesday,
+     if last week isn't saved yet, open it instead of the new week. */
+  const ti = todayInfo();
+  const prev = ti.currentWeek - 1;
+  if (prev >= 1 && seriesCache && !seriesCache[prev-1].logged &&
+      daysBetween(WEEKS[ti.currentWeek-1].monday, ti.today) <= 1 &&
+      currentWeekShown === ti.currentWeek && !dirtyCount()){
+    weekSel.value = String(prev);
+    currentWeekShown = prev;
+    await loadWeekIntoForm(prev);
+    toast('Week ' + prev + ' opened', 'It ended yesterday and isn’t saved yet — this is the week the Monday check reports.');
+  }
 }
 
 init().catch(e=>{

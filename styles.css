@@ -340,7 +340,7 @@ td.num, th.num{text-align:right; font-variant-numeric:tabular-nums;}
    Rendered as a status chip, not a bare form control: coloured dot,
    tinted pill, the select itself made invisible so the chip reads as a
    badge while staying a real <select> for keyboard and screen readers. */
-.statuscell{min-width:176px; white-space:normal; vertical-align:top;}
+.statuscell{min-width:176px; max-width:232px; white-space:normal; vertical-align:top;}
 
 .statuschip{
   display:inline-flex; align-items:center; gap:7px; position:relative;
@@ -383,7 +383,12 @@ td.num, th.num{text-align:right; font-variant-numeric:tabular-nums;}
 .statusnote:hover{border-color:var(--border-2); background:var(--bg);}
 .statusnote:focus{outline:none; border-color:var(--green-mid);
   background:var(--bg); color:var(--ink); box-shadow:0 0 0 3px var(--green-wash);}
-.statusmeta{font-size:var(--fs-3xs); color:var(--muted-2); margin-top:5px;}
+.statusmeta{font-size:var(--fs-3xs); color:var(--muted-2); margin-top:5px; line-height:1.35;}
+.statusmeta b{font-weight:700; color:var(--muted);}
+#histToggle{align-self:center;}
+.whocell{white-space:nowrap; font-size:var(--fs-2xs); line-height:1.35;}
+.whocell .whenline{display:block; color:var(--muted-2); font-size:var(--fs-3xs);}
+.whocell .muted{color:var(--muted-2);}
 .flash{display:block; font-size:var(--fs-3xs); color:var(--ok); font-weight:700;
   height:12px; opacity:0; transition:opacity .2s;}
 .flash.show{opacity:1;}
@@ -494,3 +499,98 @@ footer{margin-top:52px; padding-top:20px; border-top:1px solid var(--border);
   .entrybar{position:static;}
   .chg .lbl{min-width:0; width:100%;}
 }
+
+/* ---------------- Sprint 01 plan benchmark ---------------- */
+.plancard{border:1px solid var(--border-2); border-radius:12px; padding:14px 16px; margin:0 0 16px;
+  background:var(--surface); display:grid; gap:8px;}
+.plancard.pre{color:var(--muted); font-size:var(--fs-sm);}
+.plancard.check{border-color:#EDD9AE; background:var(--watch-wash);}
+.planhead{display:flex; justify-content:space-between; gap:10px; flex-wrap:wrap; align-items:baseline;}
+.planhead .eyebrow{margin:0;}
+.plansrc{font-size:var(--fs-3xs); color:var(--muted-2);}
+.plangrid{display:grid; grid-template-columns:repeat(4, minmax(0,1fr)); gap:10px;}
+.plangrid div{display:flex; flex-direction:column; gap:2px;}
+.plangrid span{font-size:var(--fs-3xs); color:var(--muted); text-transform:uppercase; letter-spacing:var(--tr-caps);}
+.plangrid b{font-size:var(--fs-xl); font-variant-numeric:tabular-nums; color:var(--ink);}
+.plangrid .tot b{color:var(--green-deep);}
+.planmile{font-size:var(--fs-xs); color:var(--ink); line-height:1.45;}
+.planmile.rule{color:var(--watch); font-weight:600;}
+@media (max-width:620px){.plangrid{grid-template-columns:repeat(2, minmax(0,1fr));}}
+
+.varsummary{display:flex; align-items:center; gap:10px; flex-wrap:wrap; font-size:var(--fs-sm);
+  color:var(--ink); margin:0 0 12px; line-height:1.5;}
+.vartbl td{vertical-align:top;}
+.vweek{white-space:nowrap; min-width:112px;}
+.vweek .pill{display:inline-flex; margin-top:7px; font-size:var(--fs-3xs); padding:3px 9px;}
+.vweek > span:not(.pill){display:block; font-size:var(--fs-3xs); color:var(--muted-2);}
+.vweek .vplanwk{color:var(--muted); font-weight:700;}
+.varcell{min-width:96px; font-variant-numeric:tabular-nums;}
+.varcell span{display:block; line-height:1.35;}
+.varcell .vactual{font-weight:800; color:var(--ink);}
+.varcell .vtarget{font-size:var(--fs-3xs); color:var(--muted);}
+.varcell .vdiff{font-size:var(--fs-3xs); font-weight:700;}
+.varcell .vstatus{font-size:var(--fs-3xs); font-weight:700; text-transform:uppercase; letter-spacing:var(--tr-caps);}
+.varcell.ok .vdiff, .varcell.ok .vstatus{color:var(--ok);}
+.varcell.watch .vdiff, .varcell.watch .vstatus{color:var(--watch);}
+.varcell.risk .vdiff, .varcell.risk .vstatus{color:var(--risk);}
+.vmiles{white-space:normal; min-width:215px; font-size:var(--fs-2xs); line-height:1.45;}
+.vmiles div + div{margin-top:3px;}
+.vmiles .vrule{color:var(--watch); font-weight:600;}
+tr.vcheck td{background:var(--watch-wash);}
+tr.vpre td{color:var(--muted-2);}
+.vnote{font-size:var(--fs-2xs);}
+.varfoot{font-size:var(--fs-2xs); color:var(--muted); margin-top:10px;}
+
+/* Week review (Achieved / Variance + why) */
+.vreview{min-width:180px; max-width:210px;}
+.vreview .muted{font-size:var(--fs-3xs); color:var(--muted-2);}
+.statusnote.needwhy{border-color:var(--risk); background:var(--risk-wash);}
+.statusnote.needwhy::placeholder{color:var(--risk); opacity:.85;}
+.statusnote.whynote{display:block; width:100%; min-height:44px; resize:none; overflow:hidden; field-sizing:content; line-height:1.4;
+  font-family:inherit; white-space:pre-wrap;}
+.whyhint{display:none; font-size:var(--fs-3xs); color:var(--risk); font-weight:700; margin-top:3px;}
+.statusnote.needwhy + .whyhint{display:block;}
+.statuschip{max-width:100%;}
+.statuschip .statussel{max-width:100%; min-width:0; text-overflow:ellipsis; overflow:hidden;}
+
+/* ---------------- Sprint 01 plan additions ---------------- */
+.hintrow span{font-size:var(--fs-3xs); color:var(--muted-2);}
+.subnote{margin-top:6px; font-size:var(--fs-3xs); color:var(--muted); line-height:1.45;}
+.mondaycheck{border:1px solid var(--border-2); border-radius:12px; padding:10px 16px; margin:0 0 16px; background:var(--bg);}
+.mondaycheck summary{cursor:pointer; font-weight:700; font-size:var(--fs-sm); color:var(--ink);}
+.mondaycheck ol{margin:10px 0 4px; padding-left:20px; font-size:var(--fs-xs); line-height:1.55; color:var(--ink);}
+.frow.actions{grid-template-columns:minmax(0,3fr) minmax(0,1fr);}
+.field.grow2{min-width:0;}
+.plangrid2{margin:0 0 14px;}
+.planlines{width:100%; min-width:0; font-size:var(--fs-xs); border-collapse:collapse; table-layout:fixed;}
+.planlines th, .planlines td{white-space:normal; overflow-wrap:anywhere;}
+.planlines th:first-child{width:34%;} .planlines th:nth-child(2){width:18%;}
+.planlines th{font-size:var(--fs-3xs); text-transform:uppercase; letter-spacing:var(--tr-caps); color:var(--muted); text-align:left; padding:4px 6px 6px 0;}
+.planlines td{padding:5px 8px 5px 0; border-top:1px solid var(--border); vertical-align:top;}
+.planlines tr.tot td{font-weight:700;}
+.planprice{font-size:var(--fs-3xs); color:var(--muted); margin:8px 0 0;}
+.planacts{margin:4px 0 0; padding-left:18px;}
+.gblock + .gblock{margin-top:12px; padding-top:10px; border-top:1px solid var(--border);}
+.gblock h4{margin:0 0 6px; font-size:var(--fs-3xs); text-transform:uppercase; letter-spacing:var(--tr-caps); color:var(--muted);}
+.grow{display:flex; gap:9px; align-items:flex-start; font-size:var(--fs-xs); margin:5px 0; line-height:1.4;}
+.grow span{display:block; color:var(--muted); font-size:var(--fs-3xs);}
+.gmark{flex:none; width:18px; height:18px; border-radius:50%; display:inline-flex; align-items:center; justify-content:center;
+  font-size:11px; font-weight:800; background:var(--surface); color:var(--muted-2); border:1px solid var(--border-2);}
+.gmark.ok{background:var(--green-wash); color:var(--ok); border-color:var(--green-edge);}
+.gmark.risk{background:var(--risk-wash); color:var(--risk); border-color:#EFC9C1;}
+.gverdict{margin-top:8px; font-size:var(--fs-xs); font-weight:700; color:var(--watch);}
+.gverdict.ok{color:var(--ok);}
+tr.vcurrent td{background:var(--green-wash);}
+.adpanel{display:grid; gap:10px;}
+.adgate{display:flex; gap:16px; align-items:flex-start; justify-content:space-between; flex-wrap:wrap;
+  border:1px solid var(--border-2); border-radius:12px; padding:12px 14px; font-size:var(--fs-xs); line-height:1.5;}
+.adgate > div:first-child{flex:1 1 360px; min-width:0;}
+.gatecell{border-collapse:collapse; min-width:0; width:auto;} .gatecell td{padding:0; border:0;}
+.adtbl th[scope=row]{text-align:left; font-size:var(--fs-3xs); text-transform:uppercase; letter-spacing:var(--tr-caps); color:var(--muted); white-space:nowrap;}
+.adtbl td{white-space:normal; min-width:220px;}
+.adtbl tr.adlive td, .adtbl tr.adlive th{background:var(--surface);}
+.z-ok{color:var(--ok);} .z-watch{color:var(--watch);} .z-risk{color:var(--risk);}
+.adwarn{margin-top:4px; color:var(--risk); font-size:var(--fs-3xs); font-weight:700;}
+#panel-op h4.eyebrow{margin:20px 0 8px;}
+#panel-op .panel-sub + h4.eyebrow{margin-top:8px;}
+.panel > .hint{font-size:var(--fs-3xs); color:var(--muted-2); line-height:1.4;}
